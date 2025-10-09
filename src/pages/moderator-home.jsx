@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import Calendar from "react-calendar";
+import React, { useState, useEffect } from "react";
+import Calendar from "react-calendar"; 
 import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
 import "../styles/moderator-home.css";
@@ -7,6 +7,8 @@ import "../styles/moderator-home.css";
 import { FaUser, FaBullhorn, FaFileAlt, FaHeadset, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md"; 
 
+import ProfileModal from "../components/modal-profile.jsx";
+import PostModal from "../components/m-create-post.jsx";
 // Import the new Header component
 import Header from "../components/header.jsx"; 
 
@@ -130,131 +132,6 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
     );
 };
 
-
-// =========================================================
-// Post Modal Component
-// =========================================================
-const PostModal = ({ 
-    isOpen, 
-    onClose, 
-    title, 
-    setTitle, 
-    description, 
-    setDescription, 
-    images, 
-    setImages, 
-    handlePost,
-    handleImageChange,
-    renderPreviewImages 
-}) => {
-    if (!isOpen) return null;
-
-    const handleClose = () => {
-        setTitle("");
-        setDescription("");
-        setImages([]);
-        onClose();
-    };
-
-    const handleFormSubmit = (e) => {
-        e.preventDefault();
-        handlePost();
-        onClose();
-    };
-
-    return (
-        <div className="post-modal-overlay" onClick={handleClose}>
-            <div 
-                className="post-modal-content post-form" 
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="modal-header">
-                    <h2>Create New Announcement</h2>
-                    <button className="close-btn" onClick={handleClose}>
-                        <FaTimes size={20} />
-                    </button>
-                </div>
-
-                <form onSubmit={handleFormSubmit}>
-                    <input
-                        type="text"
-                        placeholder="Add a title (Optional)"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        required={false}
-                    />
-                    <textarea
-                        placeholder="Write something for the residents..."
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        required
-                    ></textarea>
-                    
-                    <label htmlFor="file-upload" className="file-upload-label">
-                        <FaTimes style={{visibility:'hidden'}} />
-                        <span style={{flexGrow: 1, textAlign: 'center'}}>Upload Image(s)</span>
-                        <input
-                            id="file-upload"
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleImageChange}
-                            style={{display: 'none'}}
-                        />
-                        <FaTimes style={{transform: 'rotate(45deg)'}} />
-                    </label>
-
-                    {images.length > 0 && renderPreviewImages(images)}
-
-                    <button type="submit" disabled={!description.trim()}>Post Announcement</button>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-// =========================================================
-// Profile Modal Component
-// =========================================================
-const ProfileModal = ({ isOpen, onClose, onLogout }) => {
-  if (!isOpen) return null;
-
-  // Placeholder data for the moderator's profile
-  const moderatorProfile = {
-    name: "Community Moderator",
-    username: "mod_01",
-    email: "moderator@example.com",
-    barangay: "Poblacion 1",
-    joinDate: "2023-01-15",
-    avatar: "https://via.placeholder.com/100/2563eb/ffffff?text=M"
-  };
-
-  return (
-    <div className="profile-modal-overlay" onClick={onClose}>
-      <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Moderator Profile</h2>
-          <button className="close-btn" onClick={onClose}>
-            <FaTimes size={20} />
-          </button>
-        </div>
-        <div className="profile-details">
-          <img src={moderatorProfile.avatar} alt="Moderator Avatar" className="profile-avatar-large" />
-          <h3>{moderatorProfile.name}</h3>
-          <p>@{moderatorProfile.username}</p>
-          <div className="profile-info-grid">
-            <div><strong>Email:</strong> {moderatorProfile.email}</div>
-            <div><strong>Barangay:</strong> {moderatorProfile.barangay}</div>
-            <div><strong>Joined:</strong> {moderatorProfile.joinDate}</div>
-          </div>
-          {/* In a real app, this would trigger a logout function */}
-          <button className="logout-btn" onClick={onLogout}>Logout</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // =========================================================
 // Main Content Feed Component
 // =========================================================
@@ -318,7 +195,7 @@ const MainContentFeed = ({ posts, handleDeletePost, renderPostImages, openImageM
 // =========================================================
 // Main ModeratorHome Component
 // =========================================================
-function ModeratorHome() {
+function ModeratorHome() { 
     const [posts, setPosts] = useState([]);
     const navigate = useNavigate();
     const [title, setTitle] = useState("");
@@ -333,6 +210,17 @@ function ModeratorHome() {
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [modalImages, setModalImages] = useState([]);
+
+    // Load posts from localStorage on initial render
+    useEffect(() => {
+        const savedPosts = JSON.parse(localStorage.getItem("announcements")) || [];
+        setPosts(savedPosts);
+    }, []);
+
+    // Save posts to localStorage whenever they change
+    useEffect(() => {
+        localStorage.setItem("announcements", JSON.stringify(posts));
+    }, [posts]);
 
     // --- Post Handlers ---
     const handleImageChange = (e) => {
