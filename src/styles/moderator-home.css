@@ -132,6 +132,24 @@
     background-color: #f3f4f6;
 }
 
+.no-announcements h3 {
+  font-size: 20px;
+  margin-bottom: 8px;
+  color: #1e293b;
+}
+
+.no-announcement p {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.no-announcement-icon {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 15px;
+  opacity: 0.8;
+}
+
 /* ======================================================== */
 /* PROFILE MODAL STYLES */
 /* ======================================================== */

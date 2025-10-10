@@ -7,11 +7,11 @@ const ProfileModal = ({ isOpen, onClose, onLogout }) => {
 
   // Placeholder data for the moderator's profile
   const moderatorProfile = {
-    name: "{user's name}",
-    username: "mod_01",
-    email: "moderator@example.com",
-    barangay: "Poblacion 1",
-    joinDate: "2023-01-15",
+    name: "{name}",
+    username: "{username",
+    email: "{user@domain.com}",
+    barangay: "{Barangay Name}",
+    joinDate: "{Joined Date}",
     avatar: "https://via.placeholder.com/100/2563eb/ffffff?text=M",
   };
 

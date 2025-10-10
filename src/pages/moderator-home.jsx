@@ -6,7 +6,6 @@ import "../styles/moderator-home.css";
 // Import only icons needed in ModeratorHome (sidebar, posts, modals, etc.)
 import { FaUser, FaBullhorn, FaFileAlt, FaHeadset, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md"; 
-
 import ProfileModal from "../components/modal-profile.jsx";
 import PostModal from "../components/m-create-post.jsx";
 // Import the new Header component
@@ -177,7 +176,7 @@ const MainContentFeed = ({ posts, handleDeletePost, renderPostImages, openImageM
             ))}
             
             {posts.length === 0 && (
-            <div className="no-announcement">
+                <div className="no-announcements">
                 <img
                     src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png"
                     alt="No announcements"
@@ -446,6 +445,7 @@ function ModeratorHome() {
                             <FaCog size={30} />
                             <span>Settings</span>
                         </button>
+
                         <button className="m-sidebar-btn soft-teal">
                             <FaInfoCircle size={30} />
                             <span>About Us</span>
