@@ -1,0 +1,165 @@
+/* ======================================================== */
+/* CREATE POST MODAL STYLES */
+/* ======================================================== */
+.post-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    animation: fadeInOverlay 0.35s ease forwards;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; backdrop-filter: blur(0px); }
+    to { opacity: 1; backdrop-filter: blur(10px); }
+}
+
+.post-modal-content {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    padding: 24px;
+    width: 500px; 
+    height: 70%;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto; 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: slideUpModal 0.4s ease forwards;
+}
+
+@keyframes slideUpModal {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.post-modal-content .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    padding-top: 10px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.post-modal-content .modal-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    margin-left: 30px;
+}
+
+.post-modal-content .close-btn {
+    position: static;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 50%;
+    margin-right: 30px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.post-modal-content .close-btn:hover {
+    background: #e5e7eb; /* A slightly darker gray for hover */
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+.post-modal-content form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    
+}
+
+.post-modal-content input[type="text"],
+.post-modal-content textarea {
+    width: 90%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-secondary);
+    font-size: 15px;
+    font-family: "Poppins", sans-serif;
+    outline: none;
+    transition: border 0.3s ease, box-shadow 0.3s ease;
+    box-sizing: border-box;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.post-modal-content input[type="text"]:focus,
+.post-modal-content textarea:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 2px var(--brand-primary);
+}
+
+.file-upload-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 15px 15px;
+    border: 1px dashed var(--border-secondary);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.file-upload-label:hover {
+    border-color: var(--brand-primary);
+    background: var(--bg-secondary);
+}
+
+.file-upload-label svg {
+    color: var(--brand-primary);
+}
+
+.post-modal-content button[type="submit"] {
+    background: var(--brand-primary);
+    color: white;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+    margin-top: 1px;
+    margin-bottom: 20px;
+}
+
+.post-modal-content button[type="submit"]:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+.post-modal-content button[type="submit"]:disabled {
+    background: var(--text-tertiary);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.post-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 0;
+    width: 50%;
+    box-shadow: none;
+}

@@ -4,12 +4,13 @@ import React, { useState, useEffect } from "react";
 import Calendar from "react-calendar"; 
 import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
-import "../styles/home.css";
+import "../styles/resident.css";
 import {
   FaUser,
   FaCog,
   FaFileAlt,
-  FaHeadset,
+  FaHeadset,  
+  FaClipboardList,
   FaInfoCircle,
   FaBell,
   FaTimes,
@@ -20,6 +21,12 @@ import {
 import { MdOutlineAssignment } from "react-icons/md";
 import Header from "../components/header.jsx";
 import ProfileModal from "../components/modal-profile.jsx";
+import SettingModal from "../components/modal-settings.jsx"; 
+import ReportModal from "../components/modal-r-report.jsx";
+import { ThemeProvider } from "../components/ThemeContext.jsx";
+import ViewReportsModal from "../components/modal-view-reports.jsx";
+import NotificationModal from "../components/modal-notification.jsx"; // Import the new modal
+import RequestCertificationModal from "../components/modal-request-cert.jsx";
 
 // =========================================================
 // Comment Section Component (Copied from moderator-home.jsx)
@@ -84,32 +91,46 @@ function Home() {
   const [date, setDate] = useState(new Date());
   const [posts, setPosts] = useState([]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isViewReportsModalOpen, setIsViewReportsModalOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [notifications, setNotifications] = useState(() => JSON.parse(localStorage.getItem('notifications')) || []);
+  const [userReports, setUserReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
 
-  // State for Image Preview Modal
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalImages, setModalImages] = useState([]);
 
   const navigate = useNavigate();
-
-  // ✅ Load posts from localStorage (from Moderator side)
+  
+  // Load data and listen for changes from other tabs
   useEffect(() => {
-    const loadPosts = () => {
-      const saved = JSON.parse(localStorage.getItem("announcements")) || [];
-      setPosts(saved);
+    const loadData = () => {
+      setPosts(JSON.parse(localStorage.getItem("announcements")) || []);
+      setUserReports(JSON.parse(localStorage.getItem("userReports")) || []);
+      setNotifications(JSON.parse(localStorage.getItem("notifications")) || []);
     };
+    loadData();
 
-    loadPosts(); // Initial load
-
-    // Listen for changes in localStorage from other tabs
     const handleStorageChange = (e) => {
-      if (e.key === "announcements") {
-        loadPosts();
+      if (['announcements', 'userReports', 'notifications'].includes(e.key)) {
+        loadData();
       }
     };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []); // Empty dependency array ensures this runs only once on mount
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Save data to localStorage when it changes in this component
+  useEffect(() => {
+    localStorage.setItem("userReports", JSON.stringify(userReports));
+  }, [userReports]);
+  useEffect(() => {
+    localStorage.setItem("notifications", JSON.stringify(notifications));
+  }, [notifications]);
 
   // --- Comment Handler ---
   const handleAddComment = (postId, commentText) => {
@@ -130,17 +151,111 @@ function Home() {
     localStorage.setItem("announcements", JSON.stringify(updatedPosts)); // Also update localStorage
   };
 
+  const handleReportSubmit = async (reportData) => {
+    // In a real app, you'd send this to a server.
+    console.log("New Report Submitted:", reportData.type, reportData.description);
+
+    // Convert images to data URLs for storage and display
+    const mediaUrls = await Promise.all(
+      reportData.media.map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      })
+    );
+
+    const newReport = {
+      id: Date.now(),
+      date: Date.now(), // Add the current date
+      status: "submitted", // Set the initial status
+      type: reportData.type,
+      description: reportData.description,
+      media: mediaUrls, // Store the array of data URLs
+      location: reportData.location, // Store location data
+    };
+    setUserReports(prev => [...prev, newReport]);
+
+    // --- NEW: Create a notification for the moderator ---
+    const modNotif = {
+        id: Date.now() + 1, // Ensure unique ID
+        type: 'new_report',
+        message: `A new "${newReport.type}" report has been submitted.`,
+        reportId: newReport.id,
+        isRead: false,
+        date: Date.now()
+    };
+    const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
+    localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
+
+    setIsReportModalOpen(false); // Close modal on submit
+  };
+
+  const handleCancelReport = (reportId) => {
+    // Add a confirmation before deleting
+    if (window.confirm("Are you sure you want to cancel this report? This action cannot be undone.")) {
+      setUserReports(prevReports => prevReports.filter(report => report.id !== reportId));
+    }
+  };
+
+  const handleCertRequestSubmit = (requestData) => {
+    const newRequest = {
+      id: Date.now(),
+      date: Date.now(),
+      status: "Pending",
+      type: requestData.type,
+      purpose: requestData.purpose,
+      requester: "Benjie Cabajar", // Placeholder for logged-in user
+    };
+
+    const currentRequests = JSON.parse(localStorage.getItem('certificationRequests')) || [];
+    localStorage.setItem('certificationRequests', JSON.stringify([newRequest, ...currentRequests]));
+
+    // Also create a notification for the moderator
+    const modNotif = { id: Date.now() + 2, type: 'new_cert_request', message: `A new "${newRequest.type}" has been requested.`, requestId: newRequest.id, isRead: false, date: Date.now() };
+    const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
+    localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
+    alert('Your request has been submitted!');
+  };
+
+  const handleOpenViewReports = () => {
+    setIsViewReportsModalOpen(true);
+    // Mark all report-related notifications as read when opening the modal
+    const updatedNotifications = notifications.map(n => 
+      n.type === 'report_update' ? { ...n, isRead: true } : n
+    );
+    setNotifications(updatedNotifications);
+  };
+
+  const handleOpenNotifications = () => {
+    setIsNotificationModalOpen(true);
+    // Mark all notifications as read when the modal is opened
+    const updatedNotifications = notifications.map(n => ({ ...n, isRead: true }));
+    setNotifications(updatedNotifications);
+    // The useEffect hook will save this change to localStorage
+  };
+
+  const handleClearNotifications = () => {
+    if (window.confirm("Are you sure you want to clear all notifications?")) {
+        setNotifications([]);
+        localStorage.setItem('notifications', JSON.stringify([]));
+    }
+  };
   const handleLogout = () => {
     console.log("Logging out...");
     navigate("/login");
   };
 
-  // --- Image Preview Modal Logic ---
+  // --- Image Preview Modal Logic (Moved from ViewReportsModal) ---
   const openImageModal = (allImages, index) => {
     setModalImages(allImages);
     setCurrentImageIndex(index);
     setIsImageModalOpen(true);
   };
+
+
 
   const closeImageModal = () => setIsImageModalOpen(false);
 
@@ -194,13 +309,75 @@ function Home() {
     );
   };
 
+  // This is the same component from modal-view-reports, now rendered here
+  const ReportImagePreviewModal = ({ isOpen, onClose, images, startIndex }) => {
+    const [currentIndex, setCurrentIndex] = useState(startIndex);
+    if (!isOpen) return null;
+
+    const next = (e) => { e.stopPropagation(); setCurrentIndex(p => (p + 1) % images.length); };
+    const prev = (e) => { e.stopPropagation(); setCurrentIndex(p => (p - 1 + images.length) % images.length); };
+
+    return (
+      <div className="preview-modal-overlay" onClick={onClose}>
+        <button className="preview-close-btn" onClick={onClose}><FaTimes /></button>
+        <img src={images[currentIndex]} alt={`Preview ${currentIndex + 1}`} className="modal-image" />
+        {images.length > 1 && (
+          <>
+            <button className="nav-btn prev-btn" onClick={prev}><FaChevronLeft size={30} /></button>
+            <button className="nav-btn next-btn" onClick={next}><FaChevronRight size={30} /></button>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="home-page">
+    <ThemeProvider>
+      <div className="home-page">
       <ImagePreviewModal />
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         onLogout={handleLogout}
+      />
+
+      <SettingModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        onSubmit={handleReportSubmit}
+      />
+
+      <ViewReportsModal
+        isOpen={isViewReportsModalOpen}
+        onClose={() => setIsViewReportsModalOpen(false)}
+        reports={userReports}
+        onCancelReport={handleCancelReport}
+        onOpenImage={openImageModal}
+      />
+
+      <ReportImagePreviewModal
+        isOpen={isImageModalOpen}
+        onClose={closeImageModal}
+        images={modalImages}
+        startIndex={currentImageIndex}
+      />
+
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        notifications={notifications}
+        onClear={handleClearNotifications}
+      />
+
+      <RequestCertificationModal
+        isOpen={isCertModalOpen}
+        onClose={() => setIsCertModalOpen(false)}
+        onSubmit={handleCertRequestSubmit}
       />
 
       {/* ✅ Using your Header.jsx */}
@@ -215,27 +392,36 @@ function Home() {
               <span>Profile</span>
             </button>
 
-            <button className="sidebar-btn blue">
+            <button className="sidebar-btn blue notification-bell-btn" onClick={handleOpenNotifications}>
               <FaBell size={30} />
               <span>Notifications</span>
+              {notifications.filter(n => !n.isRead).length > 0 && (
+                <span className="notification-badge">{notifications.filter(n => !n.isRead).length}</span>
+              )}
             </button>
 
-            <button className="sidebar-btn teal">
+            <button className="sidebar-btn teal" onClick={() => setIsCertModalOpen(true)}>
               <MdOutlineAssignment size={30} />
               <span>Request Certification</span>
             </button>
 
-            <button className="sidebar-btn red">
+            <button className="sidebar-btn red" onClick={() => setIsReportModalOpen(true)}>
               <FaFileAlt size={30} />
               <span>File a Report</span>
             </button>
 
-            <button className="sidebar-btn green">
-              <FaHeadset size={30} />
-              <span>Contact Us</span>
+            <button className="sidebar-btn purple"
+              onClick={handleOpenViewReports}>
+              <FaClipboardList size={30} />
+              <span>View and Track Reports</span>
+              {notifications.filter(n => n.type === 'report_update' && !n.isRead).length > 0 && (
+                <span className="notification-badge">{notifications.filter(n => n.type === 'report_update' && !n.isRead).length}</span>
+              )}
             </button>
 
-            <button className="sidebar-btn gray">
+
+            <button className="sidebar-btn gray"
+              onClick={() => setIsSettingsModalOpen(true)}>
               <FaCog size={30} />
               <span>Settings</span>
             </button>
@@ -301,6 +487,7 @@ function Home() {
         </aside>
       </div>
     </div>
+    </ThemeProvider>
   );
 }
 

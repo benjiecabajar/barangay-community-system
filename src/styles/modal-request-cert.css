@@ -1,0 +1,182 @@
+/* Reusing styles from modal-r-report.css for consistency */
+.cert-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeInOverlay 0.35s ease forwards;
+}
+
+.cert-modal-content {
+    background: var(--bg-primary);
+    padding: 20px 20px 60px 20px;
+    border-radius: 16px;
+    margin-top: 50px;
+    width: 550px;
+    max-width: 90vw;
+    max-height: 77vh; /* Set a max height */
+    display: flex; /* Enable flexbox */
+    flex-direction: column; /* Stack children vertically */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: slideUpModal 0.4s ease forwards;
+}
+
+.cert-modal-content .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.cert-modal-content .modal-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+}
+
+.cert-modal-content .close-btn {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 50%;
+    top: 30px;
+    right: 30px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.cert-modal-content .close-btn:hover {
+    background: #e5e7eb;
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+.cert-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto; /* Allow this part to scroll */
+    flex-grow: 1; /* Allow it to fill available space */
+    padding: 10px;
+    margin-top: 20px;
+}
+
+.cert-form select{
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 15px;
+    border: 1px solid var(--border-secondary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+
+.cert-form textarea {
+    width: 95%;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 15px;
+    border: 1px solid var(--border-secondary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cert-form select:focus,
+.cert-form textarea:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 2px var(--brand-primary);
+}
+
+.cert-form textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* --- NEW: Barangay Clearance Form Styles --- */
+.clearance-requirements {
+    background: var(--bg-secondary);
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.requirements-header {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.input-group {
+    position: relative;
+}
+
+.input-group .input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+}
+
+.input-group input {
+    width: 90%;
+    padding: 10px 10px 10px 40px; /* Add padding for icon */
+    border-radius: 8px;
+    border: 1px solid var(--border-secondary);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.no-extra-fields-note {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    padding: 10px;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+}
+
+.circumstances-textarea {
+    margin-top: 12px;
+}
+
+/* ----------------------------------------- */
+
+.submit-cert-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--brand-primary), #2563eb);
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}

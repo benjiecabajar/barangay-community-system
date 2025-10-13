@@ -4,12 +4,17 @@ import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
 import "../styles/moderator-home.css";
 // Import only icons needed in ModeratorHome (sidebar, posts, modals, etc.)
-import { FaUser, FaBullhorn, FaFileAlt, FaHeadset, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH } from "react-icons/fa";
+import { FaUser, FaBullhorn, FaFileAlt, FaHeadset, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md"; 
-import ProfileModal from "../components/modal-profile.jsx";
+import "../styles/m-create-post.css";
+import ReviewReportModal from "../components/m-review-report.jsx"; // Import the new modal
 import PostModal from "../components/m-create-post.jsx";
+import NotificationModal from "../components/modal-notification.jsx";
 // Import the new Header component
 import Header from "../components/header.jsx"; 
+import ProfileModal from "../components/modal-profile.jsx";
+import SettingModal from "../components/modal-settings.jsx";
+import { ThemeProvider } from "../components/ThemeContext";
 
 // =========================================================
 // Comment Section Component
@@ -204,18 +209,68 @@ function ModeratorHome() {
 
     const [isPostModalOpen, setIsPostModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+    const [moderatorNotifications, setModeratorNotifications] = useState(() => JSON.parse(localStorage.getItem('moderatorNotifications')) || []);
+    const [isReviewReportModalOpen, setIsReviewReportModalOpen] = useState(false);
+    const [allReports, setAllReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
 
     // State for Image Preview Modal (for existing posts)
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [modalImages, setModalImages] = useState([]);
 
-    // Load posts from localStorage on initial render
+    // Load data and listen for changes
     useEffect(() => {
-        const savedPosts = JSON.parse(localStorage.getItem("announcements")) || [];
-        setPosts(savedPosts);
+        const loadData = () => {
+            setPosts(JSON.parse(localStorage.getItem("announcements")) || []);
+            setAllReports(JSON.parse(localStorage.getItem("userReports")) || []);
+            setModeratorNotifications(JSON.parse(localStorage.getItem("moderatorNotifications")) || []);
+        };
+        loadData();
+
+        const handleStorageChange = (e) => {
+            if (['announcements', 'userReports', 'moderatorNotifications'].includes(e.key)) {
+                loadData();
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
+    const handlePost = () => {
+        if (title.trim() || description.trim()) {
+            const newPost = {
+                id: Date.now(),
+                title,
+                description,
+                images,
+                author: "Community Moderator", 
+                authorAvatar: "https://via.placeholder.com/48/2563eb/ffffff?text=M",
+                date: new Date().toLocaleString(),
+                comments: [], // Initialize comments array
+            };
+            setPosts([newPost, ...posts]);
+
+            // Create a notification for the new announcement
+            const notif = {
+                id: Date.now(),
+                type: 'new_announcement',
+                message: `A new announcement has been posted: "${title || description.slice(0, 30) + '...'}"`,
+                postId: newPost.id,
+                isRead: false,
+                date: Date.now()
+            };
+            const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
+            localStorage.setItem('notifications', JSON.stringify([notif, ...currentNotifs]));
+
+            // Reset form fields after successful post
+            setTitle("");
+            setDescription("");
+            setImages([]);
+        }
+    };
+    
     // Save posts to localStorage whenever they change
     useEffect(() => {
         localStorage.setItem("announcements", JSON.stringify(posts));
@@ -231,31 +286,59 @@ function ModeratorHome() {
         }
     };
 
-    const handlePost = () => {
-        if (title.trim() || description.trim()) {
-            const newPost = {
-                id: Date.now(),
-                title,
-                description,
-                images,
-                author: "Community Moderator", 
-                authorAvatar: "https://via.placeholder.com/48/2563eb/ffffff?text=M",
-                date: new Date().toLocaleString(),
-                comments: [], // Initialize comments array
-            };
-            setPosts([newPost, ...posts]);
-            // Reset form fields after successful post
-            setTitle("");
-            setDescription("");
-            setImages([]);
-        }
-    };
-    
     const handleDeletePost = (postId) => {
         if (window.confirm("Are you sure you want to delete this post?")) {
             setPosts(posts.filter(post => post.id !== postId));
         }
     };
+
+    const handleDeleteReport = (reportId) => {
+        if (window.confirm("Are you sure you want to permanently delete this report?")) {
+            const updatedReports = allReports.filter(report => report.id !== reportId);
+            setAllReports(updatedReports);
+        }
+    };
+
+    const handleUpdateReportStatus = (reportId, newStatus) => {
+        let reportToUpdate;
+        const updatedReports = allReports.map(report => {
+            if (report.id === reportId) {
+                reportToUpdate = { ...report, status: newStatus };
+                return reportToUpdate;
+            }
+            return report;
+        });
+        setAllReports(updatedReports);
+        localStorage.setItem("userReports", JSON.stringify(updatedReports));
+
+        // Create a notification for the report update
+        const notif = {
+            id: Date.now(),
+            type: 'report_update',
+            message: `Your report "${reportToUpdate.type}" has been updated to "${newStatus}".`,
+            reportId: reportId,
+            isRead: false,
+            date: Date.now()
+        };
+        const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
+        localStorage.setItem('notifications', JSON.stringify([notif, ...currentNotifs]));
+    };
+
+    const handleOpenNotifications = () => {
+        setIsNotificationModalOpen(true);
+        // Mark all notifications as read when the modal is opened
+        const updatedNotifications = moderatorNotifications.map(n => ({ ...n, isRead: true }));
+        setModeratorNotifications(updatedNotifications);
+        localStorage.setItem('moderatorNotifications', JSON.stringify(updatedNotifications));
+    };
+
+    const handleClearNotifications = () => {
+        if (window.confirm("Are you sure you want to clear all notifications?")) {
+            setModeratorNotifications([]);
+            localStorage.setItem('moderatorNotifications', JSON.stringify([]));
+        }
+    };
+
 
     const handleLogout = () => {
         // For now, just navigate to login. In a real app, you'd clear tokens/session state.
@@ -354,10 +437,8 @@ function ModeratorHome() {
 
         return (
             <div className="preview-modal-overlay" onClick={closeImageModal}>
-                <div className="preview-modal-content" onClick={(e) => e.stopPropagation()}>
-                    <button className="close-btn" onClick={closeImageModal}>
-                        <FaTimes />
-                    </button>
+                <div className="preview-modal-content" onClick={(e) => e.stopPropagation()}>                    
+                    <button className="preview-close-btn" onClick={closeImageModal}><FaTimes /></button>
                     
                     <img 
                         src={modalImages[currentImageIndex]} 
@@ -385,98 +466,138 @@ function ModeratorHome() {
     };
 
     return (
-        <div className="moderator-page">
-            <ImagePreviewModal />
-            <ProfileModal 
-              isOpen={isProfileModalOpen}
-              onClose={() => setIsProfileModalOpen(false)}
-              onLogout={handleLogout}
-            />
+      <ThemeProvider>
+        <div className="moderator-page">
+            <ImagePreviewModal />
+            <ProfileModal 
+              isOpen={isProfileModalOpen}
+              onClose={() => setIsProfileModalOpen(false)}
+              onLogout={handleLogout}
+            />
 
-            <PostModal 
-                isOpen={isPostModalOpen}
-                onClose={() => setIsPostModalOpen(false)}
-                title={title}
-                setTitle={setTitle}
-                description={description}
-                setDescription={setDescription}
-                images={images}
-                setImages={setImages}
-                handlePost={handlePost}
-                handleImageChange={handleImageChange}
-                renderPreviewImages={renderPreviewImages}
-            />
+            <PostModal 
+                isOpen={isPostModalOpen}
+                onClose={() => setIsPostModalOpen(false)}
+                title={title}
+                setTitle={setTitle}
+                description={description}
+                setDescription={setDescription}
+                images={images}
+                setImages={setImages}
+                handlePost={handlePost}
+                handleImageChange={handleImageChange}
+                renderPreviewImages={renderPreviewImages}
+            />
 
-            {/* Use the new Header Component */}
-            <Header /> 
+            <SettingModal
+             isOpen={isSettingsModalOpen}
+             onClose={() => setIsSettingsModalOpen(false)}
+            />
 
-            <div className="content">
-                {/* Left Sidebar */}
-                <aside className="m-left-panel">
-                    <div className="m-side-buttons">
-                        <button
-                            className="m-sidebar-btn orange"
-                            onClick={() => setIsProfileModalOpen(true)}
-                        >
-                            <FaUser size={30} />
-                            <span>Profile</span>
-                        </button>
-                        <button 
-                            className="m-sidebar-btn blue" 
-                            onClick={() => setIsPostModalOpen(true)}
-                        >
-                            <FaBullhorn size={30} />
-                            <span>Create Announcement</span>
-                        </button>
-                        
-                        <button className="m-sidebar-btn teal">
-                            <MdOutlineAssignment size={30} />
-                            <span>Certification Requests</span>
-                        </button>
-                        <button className="m-sidebar-btn red">
-                            <FaFileAlt size={30} />
-                            <span>Resident Reports</span>
-                        </button>
-                        <button className="m-sidebar-btn green">
-                            <FaHeadset size={30} />
-                            <span>Support / Contact Admin</span>
-                        </button>
-                        <button className="m-sidebar-btn gray">
-                            <FaCog size={30} />
-                            <span>Settings</span>
-                        </button>
+            <ReviewReportModal
+                isOpen={isReviewReportModalOpen}
+                onClose={() => setIsReviewReportModalOpen(false)}
+                reports={allReports}
+                onUpdateReportStatus={handleUpdateReportStatus}
+                onDeleteReport={handleDeleteReport}
+            />
 
-                        <button className="m-sidebar-btn soft-teal">
-                            <FaInfoCircle size={30} />
-                            <span>About Us</span>
-                        </button>
-                    </div>
-                </aside>
+            <NotificationModal
+                isOpen={isNotificationModalOpen}
+                onClose={() => setIsNotificationModalOpen(false)}
+                notifications={moderatorNotifications}
+                onClear={handleClearNotifications}
+            />
 
-                {/* Main Content Feed Component */}
-                <MainContentFeed
-                    posts={posts}
-                    handleDeletePost={handleDeletePost}
-                    renderPostImages={renderPostImages}
-                    openImageModal={openImageModal}
-                    handleAddComment={handleAddComment}
-                />
 
-                {/* Right Sidebar */}
-                <aside className="right-panel">
-                    <div className="calendar-box">
-                        <h4>CALENDAR</h4>
-                        <Calendar value={date} onChange={setDate} />
-                    </div>
+            {/* Use the new Header Component */}
+            <Header /> 
 
-                    <div className="events-box">
-                        <h4>UPCOMING EVENTS</h4>
-                        <div className="event-placeholder"></div>
-                        <div className="event-placeholder"></div>
-                    </div>
-                </aside>
-            </div>
-        </div>
+            <div className="content">
+                {/* Left Sidebar */}
+                <aside className="m-left-panel">
+                    <div className="m-side-buttons">
+                        <button
+                            className="m-sidebar-btn orange"
+                            onClick={() => setIsProfileModalOpen(true)}
+                        >
+                            <FaUser size={30} />
+                            <span>Profile</span>
+                        </button>
+
+                        <button className="m-sidebar-btn blue notification-bell-btn" onClick={handleOpenNotifications}>
+                            <FaBell size={30} />
+                            <span>Notifications</span>
+                            {moderatorNotifications.filter(n => !n.isRead).length > 0 && (
+                                <span className="notification-badge">{moderatorNotifications.filter(n => !n.isRead).length}</span>
+                            )}
+                        </button>
+
+                        <button 
+                            className="m-sidebar-btn blue" 
+                            onClick={() => setIsPostModalOpen(true)}
+                        >
+                            <FaBullhorn size={30} />
+                            <span>Create Announcement</span>
+                        </button>
+                        
+                        <button className="m-sidebar-btn teal">
+                            <MdOutlineAssignment size={30} />
+                            <span>Certification Requests</span>
+                        </button>
+
+                        <button 
+                            className="m-sidebar-btn red"
+                            onClick={() => setIsReviewReportModalOpen(true)}
+                        >
+                            <FaFileAlt size={30} />
+                            <span>Resident Reports</span>
+                        </button>
+                        
+                        <button className="m-sidebar-btn green">
+                            <FaHeadset size={30} />
+                            <span>Support</span>
+                        </button>
+
+                        <button className="m-sidebar-btn gray"
+                            onClick={() => setIsSettingsModalOpen(true)}
+                        >
+                            <FaCog size={30} />
+                            <span>Settings</span>
+                        </button>
+
+                        <button className="m-sidebar-btn soft-teal">
+                            <FaInfoCircle size={30} />
+                            <span>About Us</span>
+                        </button>
+                    </div>
+                </aside>
+
+                {/* Main Content Feed Component */}
+                <MainContentFeed
+                    posts={posts}
+                    handleDeletePost={handleDeletePost}
+                    renderPostImages={renderPostImages}
+                    openImageModal={openImageModal}
+                    handleAddComment={handleAddComment}
+                />
+
+                {/* Right Sidebar */}
+                <aside className="right-panel">
+                    <div className="calendar-box">
+                        <h4>CALENDAR</h4>
+                        <Calendar value={date} onChange={setDate} />
+                    </div>
+
+                    <div className="events-box">
+                        <h4>UPCOMING EVENTS</h4>
+                        <div className="event-placeholder"></div>
+                        <div className="event-placeholder"></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+      </ThemeProvider>
     );
 }
 

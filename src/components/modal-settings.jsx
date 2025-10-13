@@ -1,61 +1,76 @@
-import React from 'react';
-import '../styles/modal-settings.css';
+import { FaTimes } from "react-icons/fa";
+import "../styles/modal-settings.css";
+import { useTheme } from "./ThemeContext";
 
-const ModalSettings = ({ isOpen, onClose }) => {
-  if (!isOpen) {
-    return null;
-  }
+const SettingModal = ({ isOpen, onClose }) => {
+  const { theme, setTheme, fontSize, setFontSize } = useTheme();
+  if (!isOpen) return null;
 
   return (
     <div className="settings-modal-overlay" onClick={onClose}>
-      <div className="settings-modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Settings</h2>
-        <div className="settings-section">
-          <h3>Account</h3>
-          <div className="setting-item">
-            <label htmlFor="username">Username</label>
-            <input type="text" id="username" defaultValue="current_username" />
-          </div>
-          <div className="setting-item">
-            <label htmlFor="password">Password</label>
-            <button>Change Password</button>
-          </div>
-        </div>
-        <div className="settings-section">
-          <h3>Notifications</h3>
-          <div className="setting-item">
-            <label>
-              <input type="checkbox" defaultChecked />
-              Email Notifications
-            </label>
-          </div>
-          <div className="setting-item">
-            <label>
-              <input type="checkbox" />
-              Push Notifications
-            </label>
-          </div>
-        </div>
-        <div className="settings-section">
-          <h3>Theme</h3>
-          <div className="setting-item">
-            <label htmlFor="theme-select">Theme</label>
-            <select id="theme-select">
-              <option>Light</option>
-              <option>Dark</option>
-            </select>
-          </div>
-        </div>
-        <div className="modal-actions">
-          <button className="save-button">Save Changes</button>
-          <button className="cancel-button" onClick={onClose}>
-            Cancel
+      <div
+        className="settings-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h2>Settings</h2>
+          <button className="close-btn" onClick={onClose}>
+            <FaTimes size={20} />
           </button>
         </div>
-        <button onClick={onClose}>Close</button>
+
+        <div className="settings-body">
+          <h3 className="settings-section-header">Notifications</h3>
+          <div className="setting-item">
+            <label htmlFor="notification-toggle">Email Notifications</label>
+            <label className="switch">
+              <input type="checkbox" id="notification-toggle" defaultChecked />
+              <span className="slider round"></span>
+            </label>
+          </div>
+
+          <h3 className="settings-section-header">Appearance & Accessibility</h3>
+          <div className="setting-item">
+            <label>Theme</label>
+            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+              <option value="light">Light Mode</option>
+              <option value="dark">Dark Mode</option>
+            </select>
+          </div>
+          <div className="setting-item">
+            <label>Font Size</label>
+            <select
+              value={fontSize}
+              onChange={(e) => setFontSize(e.target.value)}
+            >
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+          <div className="setting-item">
+            <label htmlFor="contrast-toggle">High Contrast Mode</label>
+            <label className="switch">
+              <input type="checkbox" id="contrast-toggle" />
+              <span className="slider round"></span>
+            </label>
+          </div>
+
+          <h3 className="settings-section-header">Language & Region</h3>
+          <div className="setting-item">
+            <label>Language</label>
+            <select defaultValue="en">
+              <option value="en">English</option>
+              <option value="tl">Tagalog</option>
+            </select>
+          </div>
+
+          <h3 className="settings-section-header">Account Security</h3>
+          <button className="change-password-btn">Change Password</button>
+        </div>
       </div>
     </div>
   );
 };
 
-export default ModalSettings;
+export default SettingModal;

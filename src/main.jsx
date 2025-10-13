@@ -1,10 +1,9 @@
 import { StrictMode, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Header from './components/header'
 import Login from './pages/login'
 import SignIn from './pages/sign_in'
-import Home from './pages/home'
+import ResidentHome from './pages/resident-home'
 import ModeratorHome from './pages/moderator-home'
 import AdminHome from './pages/admin_homepage'
 import OfflineScreen from './components/OfflineScreen'
@@ -44,7 +43,7 @@ function AppWrapper() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/resident" element={<Home />} />
+        <Route path="/resident" element={<ResidentHome />} />
         <Route path="/moderator" element={<ModeratorHome />} />
         <Route path="/admin" element={<AdminHome />} />
       </Routes>

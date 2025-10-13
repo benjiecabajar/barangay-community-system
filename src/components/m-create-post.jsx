@@ -1,6 +1,7 @@
 import React from "react";
 import { FaTimes } from "react-icons/fa";
 import "../styles/moderator-home.css";
+import "../styles/m-create-post.css";
 
 const PostModal = ({
   isOpen,
