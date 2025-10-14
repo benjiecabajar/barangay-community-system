@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import "../styles/login.css";
 import "../styles/sign_in.css";
 import "@fontsource/poppins";
+import { logAuditAction } from "../utils/auditLogger";
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function SignIn() {
 
   const [errors, setErrors] = useState({});
   const [notification, setNotification] = useState("");
+  const [signupStatus, setSignupStatus] = useState(null); // To show confirmation screen
   // NEW STATE: Tracks if the user has manually changed the username
   const [isUsernameCustom, setIsUsernameCustom] = useState(false); 
 
@@ -157,13 +159,60 @@ export default function SignIn() {
     }
 
     console.log("Form submitted:", form);
-    navigate("/resident");
+    
+    const registerUser = async () => {
+      setSignupStatus('submitting');
+      try {
+        // In a real app, this would be your backend API endpoint
+        // const response = await fetch('/api/register', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify(form),
+        // });
+        // if (!response.ok) {
+        //   throw new Error('Registration failed');
+        // }
+
+        // --- SIMULATION of a successful API call ---
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log("Simulated registration successful.");
+        // --- END SIMULATION ---
+
+        logAuditAction(
+          'User Account Created', 
+          { username: form.username, email: form.email }, 
+          'resident'
+        );
+        setSignupStatus('success');
+      } catch (error) {
+        console.error("Registration error:", error);
+        setNotification("Registration failed. Please try again later.");
+        setSignupStatus(null); // Reset status to allow retry
+      }
+    };
+
+    registerUser();
   };
 
   return (
     <div className="sign-page">
-      <div className="sign-box">
-        <h1>Sign in</h1>
+      {signupStatus === 'success' ? (
+        <div className="sign-box success-confirmation">
+          <svg className="success-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2"/>
+            <path d="M8 12L11 15L16 9" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <h1>Account Created!</h1>
+          <p className="confirmation-text">
+            A confirmation link has been sent to <strong>{form.email}</strong>. Please check your inbox to verify your account.
+          </p>
+          <button className="signin-btn" onClick={() => navigate('/login')}>
+            Proceed to Login
+          </button>
+        </div>
+      ) : (
+        <div className="sign-box">
+        <h1>Sign Up</h1>
         <h2>___</h2>
         <h3>Fill up information</h3>
 
@@ -258,13 +307,14 @@ export default function SignIn() {
         {notification && <p className="notification">{notification}</p>}
 
         <button className="signin-btn" onClick={handleSubmit}>
-          Sign in
+          {signupStatus === 'submitting' ? 'Creating Account...' : 'Sign Up'}
         </button>
 
         <p className="signup-text">
           Already have an account? <Link to="/login">Login</Link>
         </p>
+        </div>
+      )}
       </div>
-    </div>
   );
 }

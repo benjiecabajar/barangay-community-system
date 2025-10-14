@@ -191,6 +191,27 @@ input:checked + .slider:before {
   border-color: var(--border-secondary);
 }
 
+/* --- NEW: View Log Button --- */
+.view-log-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.view-log-btn:hover {
+  background: var(--bg-tertiary);
+}
+
 /* ======================================================== */
 /* ACTIVITY LOG STYLES (NEW) */
 /* ======================================================== */

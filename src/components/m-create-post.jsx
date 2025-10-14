@@ -15,6 +15,7 @@ const PostModal = ({
   handlePost,
   handleImageChange,
   renderPreviewImages,
+  editingPost, // Add editingPost to props
 }) => {
   if (!isOpen) return null;
 
@@ -27,8 +28,8 @@ const PostModal = ({
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    handlePost();
-    onClose();
+    handlePost(); // This now handles both create and update
+    // onClose is called inside handlePost after logic is complete
   };
 
   return (
@@ -38,7 +39,7 @@ const PostModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h2>Create New Announcement</h2>
+          <h2>{editingPost ? "Edit Announcement" : "Create New Announcement"}</h2>
           <button className="close-btn" onClick={handleClose}>
             <FaTimes size={20} />
           </button>
@@ -68,7 +69,9 @@ const PostModal = ({
 
           {images.length > 0 && renderPreviewImages(images)}
 
-          <button type="submit" disabled={!description.trim()}>Post Announcement</button>
+          <button type="submit" disabled={!description.trim()}>
+            {editingPost ? "Save Changes" : "Post Announcement"}
+          </button>
         </form>
       </div>
     </div>

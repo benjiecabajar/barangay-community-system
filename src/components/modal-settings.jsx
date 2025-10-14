@@ -1,9 +1,12 @@
-import { FaTimes } from "react-icons/fa";
+import React, { useState } from "react";
+import { FaTimes, FaHistory } from "react-icons/fa";
 import "../styles/modal-settings.css";
 import { useTheme } from "./ThemeContext";
+import AuditLogModal from "./modal-audit-log.jsx";
 
-const SettingModal = ({ isOpen, onClose }) => {
+const SettingModal = ({ isOpen, onClose, role }) => {
   const { theme, setTheme, fontSize, setFontSize } = useTheme();
+  const [isAuditLogOpen, setIsAuditLogOpen] = useState(false);
   if (!isOpen) return null;
 
   return (
@@ -18,6 +21,12 @@ const SettingModal = ({ isOpen, onClose }) => {
             <FaTimes size={20} />
           </button>
         </div>
+
+        <AuditLogModal
+          isOpen={isAuditLogOpen}
+          onClose={() => setIsAuditLogOpen(false)}
+          role={role}
+        />
 
         <div className="settings-body">
           <h3 className="settings-section-header">Notifications</h3>
@@ -48,13 +57,7 @@ const SettingModal = ({ isOpen, onClose }) => {
               <option value="large">Large</option>
             </select>
           </div>
-          <div className="setting-item">
-            <label htmlFor="contrast-toggle">High Contrast Mode</label>
-            <label className="switch">
-              <input type="checkbox" id="contrast-toggle" />
-              <span className="slider round"></span>
-            </label>
-          </div>
+
 
           <h3 className="settings-section-header">Language & Region</h3>
           <div className="setting-item">
@@ -67,6 +70,9 @@ const SettingModal = ({ isOpen, onClose }) => {
 
           <h3 className="settings-section-header">Account Security</h3>
           <button className="change-password-btn">Change Password</button>
+          <button className="view-log-btn" onClick={() => setIsAuditLogOpen(true)}>
+            <FaHistory /> View Activity Log
+          </button>
         </div>
       </div>
     </div>

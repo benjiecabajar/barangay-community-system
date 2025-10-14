@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
 import "../styles/moderator-home.css";
 // Import only icons needed in ModeratorHome (sidebar, posts, modals, etc.)
-import { FaUser, FaBullhorn, FaFileAlt, FaHeadset, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell } from "react-icons/fa";
+import { FaUser, FaBullhorn, FaFileAlt, FaHeadset, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell, FaEdit, FaTrash } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md"; 
 import "../styles/m-create-post.css";
 import ReviewReportModal from "../components/m-review-report.jsx"; // Import the new modal
@@ -15,6 +15,7 @@ import Header from "../components/header.jsx";
 import ProfileModal from "../components/modal-profile.jsx";
 import SettingModal from "../components/modal-settings.jsx";
 import { ThemeProvider } from "../components/ThemeContext";
+import { logAuditAction } from "../utils/auditLogger.js";
 
 // =========================================================
 // Comment Section Component
@@ -139,7 +140,7 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
 // =========================================================
 // Main Content Feed Component
 // =========================================================
-const MainContentFeed = ({ posts, handleDeletePost, renderPostImages, openImageModal, handleAddComment }) => {
+const MainContentFeed = ({ posts, handleDeletePost, handleEditClick, renderPostImages, openImageModal, handleAddComment, openMenuPostId, setOpenMenuPostId }) => {
     return (
         <main className="main-content">
             {/* Posts Feed - Social Media Style */}
@@ -151,16 +152,21 @@ const MainContentFeed = ({ posts, handleDeletePost, renderPostImages, openImageM
                             <span className="author-name">{post.author}</span>
                             <span className="post-time">{post.date}</span>
                         </div>
-                        <button className="options-btn" title="Post Options">
-                            <FaEllipsisH size={18} />
-                        </button>
-                        <button 
-                            className="delete-post-btn" 
-                            onClick={() => handleDeletePost(post.id)}
-                            title="Delete Post"
-                        >
-                            <FaTimes size={18} />
-                        </button>
+                            <div className="post-actions-container">
+                                <button className="options-btn" onClick={() => setOpenMenuPostId(openMenuPostId === post.id ? null : post.id)}>
+                                    <FaEllipsisH size={18} />
+                                </button>
+                                {openMenuPostId === post.id && (
+                                    <div className="post-actions-menu">
+                                        <button onClick={() => { handleEditClick(post); setOpenMenuPostId(null); }}>
+                                            <FaEdit /> Edit
+                                        </button>
+                                        <button onClick={() => { handleDeletePost(post.id); setOpenMenuPostId(null); }} className="delete">
+                                            <FaTrash /> Delete
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                     </div>
                     
                     {post.title && <p className="update-title">{post.title}</p>}
@@ -212,6 +218,8 @@ function ModeratorHome() {
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
     const [moderatorNotifications, setModeratorNotifications] = useState(() => JSON.parse(localStorage.getItem('moderatorNotifications')) || []);
+    const [openMenuPostId, setOpenMenuPostId] = useState(null);
+    const [editingPost, setEditingPost] = useState(null); // State to track the post being edited
     const [isReviewReportModalOpen, setIsReviewReportModalOpen] = useState(false);
     const [allReports, setAllReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
 
@@ -239,7 +247,25 @@ function ModeratorHome() {
     }, []);
 
     const handlePost = () => {
-        if (title.trim() || description.trim()) {
+        // If we are editing, call the update handler instead
+        if (editingPost) {
+            const updatedPost = {
+                ...editingPost,
+                title,
+                description,
+                images,
+            };
+            setPosts(posts.map(p => p.id === editingPost.id ? updatedPost : p));
+            setEditingPost(null);
+            setTitle("");
+            setDescription("");
+            setImages([]);
+            setIsPostModalOpen(false); // Close modal after saving
+            return;
+        }
+
+        // Logic for creating a new post
+        if (description.trim()) {
             const newPost = {
                 id: Date.now(),
                 title,
@@ -251,6 +277,7 @@ function ModeratorHome() {
                 comments: [], // Initialize comments array
             };
             setPosts([newPost, ...posts]);
+            logAuditAction('Created Announcement', { postId: newPost.id, title: newPost.title }, 'moderator');
 
             // Create a notification for the new announcement
             const notif = {
@@ -268,6 +295,7 @@ function ModeratorHome() {
             setTitle("");
             setDescription("");
             setImages([]);
+            setIsPostModalOpen(false);
         }
     };
     
@@ -289,12 +317,22 @@ function ModeratorHome() {
     const handleDeletePost = (postId) => {
         if (window.confirm("Are you sure you want to delete this post?")) {
             setPosts(posts.filter(post => post.id !== postId));
+            logAuditAction('Deleted Announcement', { postId }, 'moderator');
         }
     };
+
+    const handleEditClick = (post) => {
+        setEditingPost(post);
+        setTitle(post.title);
+        setDescription(post.description);
+        setImages(post.images);
+        setIsPostModalOpen(true);
+    };
 
     const handleDeleteReport = (reportId) => {
         if (window.confirm("Are you sure you want to permanently delete this report?")) {
             const updatedReports = allReports.filter(report => report.id !== reportId);
+            logAuditAction('Deleted Report', { reportId }, 'moderator');
             setAllReports(updatedReports);
         }
     };
@@ -309,6 +347,7 @@ function ModeratorHome() {
             return report;
         });
         setAllReports(updatedReports);
+        logAuditAction('Updated Report Status', { reportId, newStatus }, 'moderator');
         localStorage.setItem("userReports", JSON.stringify(updatedReports));
 
         // Create a notification for the report update
@@ -337,6 +376,22 @@ function ModeratorHome() {
             setModeratorNotifications([]);
             localStorage.setItem('moderatorNotifications', JSON.stringify([]));
         }
+    };
+
+    const handleDeleteNotification = (notificationId) => {
+        if (window.confirm("Are you sure you want to delete this notification?")) {
+            const updatedNotifications = moderatorNotifications.filter(n => n.id !== notificationId);
+            setModeratorNotifications(updatedNotifications);
+            localStorage.setItem('moderatorNotifications', JSON.stringify(updatedNotifications));
+        }
+    };
+
+    const handleClosePostModal = () => {
+        setIsPostModalOpen(false);
+        setEditingPost(null); // Clear editing state
+        setTitle("");
+        setDescription("");
+        setImages([]);
     };
 
 
@@ -465,6 +520,9 @@ function ModeratorHome() {
         );
     };
 
+    // Calculate the number of new reports to show in the badge
+    const newReportsCount = allReports.filter(report => report.status === 'submitted').length;
+
     return (
       <ThemeProvider>
         <div className="moderator-page">
@@ -477,7 +535,7 @@ function ModeratorHome() {
 
             <PostModal 
                 isOpen={isPostModalOpen}
-                onClose={() => setIsPostModalOpen(false)}
+                onClose={handleClosePostModal}
                 title={title}
                 setTitle={setTitle}
                 description={description}
@@ -487,11 +545,13 @@ function ModeratorHome() {
                 handlePost={handlePost}
                 handleImageChange={handleImageChange}
                 renderPreviewImages={renderPreviewImages}
+                editingPost={editingPost}
             />
 
             <SettingModal
              isOpen={isSettingsModalOpen}
              onClose={() => setIsSettingsModalOpen(false)}
+             role="moderator"
             />
 
             <ReviewReportModal
@@ -507,6 +567,7 @@ function ModeratorHome() {
                 onClose={() => setIsNotificationModalOpen(false)}
                 notifications={moderatorNotifications}
                 onClear={handleClearNotifications}
+                onDelete={handleDeleteNotification}
             />
 
 
@@ -552,6 +613,9 @@ function ModeratorHome() {
                         >
                             <FaFileAlt size={30} />
                             <span>Resident Reports</span>
+                            {newReportsCount > 0 && (
+                                <span className="notification-badge">{newReportsCount}</span>
+                            )}
                         </button>
                         
                         <button className="m-sidebar-btn green">
@@ -577,8 +641,11 @@ function ModeratorHome() {
                 <MainContentFeed
                     posts={posts}
                     handleDeletePost={handleDeletePost}
+                    handleEditClick={handleEditClick}
                     renderPostImages={renderPostImages}
                     openImageModal={openImageModal}
+                    openMenuPostId={openMenuPostId}
+                    setOpenMenuPostId={setOpenMenuPostId}
                     handleAddComment={handleAddComment}
                 />
 

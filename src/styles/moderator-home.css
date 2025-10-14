@@ -313,6 +313,73 @@
     color: #dc2626;
 }
 
+/* New Post Actions Menu */
+.post-actions-container {
+    position: absolute;
+    top: 1px;
+    right: 35px;
+}
+
+.post-actions-container:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.options-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s;
+}
+
+.options-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.post-actions-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10;
+    width: 120px;
+    overflow: hidden;
+    border: 1px solid var(--border-primary);
+}
+
+.post-actions-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.post-actions-menu button:hover {
+    background: var(--bg-secondary);
+}
+
+.post-actions-menu button.delete {
+    color: #dc2626;
+}
+
+.post-actions-menu button.delete:hover {
+    background: #fee2e2;
+}
+
 /* Post Title and Description */
 .update-title {
   font-size: var(--font-size-lg);

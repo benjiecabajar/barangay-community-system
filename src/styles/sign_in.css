@@ -239,6 +239,41 @@ html, body, #root {
   text-decoration: underline;
 }
 
+/* --- NEW: Success Confirmation Styles --- */
+.success-confirmation {
+  text-align: center;
+  padding: 40px;
+}
+
+.success-confirmation h1 {
+  color: #22c55e; /* Green */
+  margin-bottom: 10px;
+}
+
+.success-icon {
+  width: 70px;
+  height: 70px;
+  margin-bottom: 20px;
+  animation: popIn 0.5s cubic-bezier(0.25, 0.25, 0.25, 1.25);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.confirmation-text {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+.confirmation-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 /* Styling for inputs with errors (to turn the border red) */
 .error-input {
   /* Change the border color to red */

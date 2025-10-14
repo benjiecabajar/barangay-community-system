@@ -3,6 +3,7 @@ import "../styles/login.css";
 import "@fontsource/poppins";
 import { FaUser, FaLock } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
+import { logAuditAction } from "../utils/auditLogger";
 
 
 function Login() {
@@ -33,6 +34,7 @@ function Login() {
   const handleLogin = () => {
     if (!username || !password) {
       setNotification("Please enter both username and password.");
+      logAuditAction('Login Attempt Failed', { username, reason: 'Missing credentials' });
       return;
     }
 
@@ -53,6 +55,7 @@ function Login() {
     // (Optional) Add authentication logic here
     
     // Redirect on success
+    logAuditAction('User Logged In', { username });
     navigate("/resident");
   };
 

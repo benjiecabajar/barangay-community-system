@@ -138,9 +138,19 @@
     color: var(--text-tertiary);
 }
 
+.input-group.name-inputs {
+    display: flex;
+    gap: 8px;
+    padding-left: 0; /* Override padding for the group */
+}
+
+.input-group.name-inputs input {
+    padding-left: 12px; /* Adjust padding since icon is removed */
+}
+
 .input-group input {
-    width: 90%;
-    padding: 10px 10px 10px 40px; /* Add padding for icon */
+    width: 95%;
+    padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid var(--border-secondary);
     background: var(--bg-primary);

@@ -18,13 +18,25 @@ import { useTheme } from "./ThemeContext";
 const ViewReportsModal = ({ isOpen, onClose, reports, onCancelReport, onOpenImage }) => {
   const { theme } = useTheme();
   const [selectedReport, setSelectedReport] = useState(null);
+  const [cancellationStatus, setCancellationStatus] = useState(null); // 'cancelling', 'success'
 
   if (!isOpen) return null;
 
   const handleCancelClick = () => {
-    if (selectedReport) {
-      onCancelReport(selectedReport.id);
-      setSelectedReport(null);
+    if (selectedReport && window.confirm("Are you sure you want to cancel/delete this report? This action cannot be undone.")) {
+      setCancellationStatus('cancelling');
+
+      // Simulate a 2-second cancellation process
+      setTimeout(() => {
+        onCancelReport(selectedReport.id);
+        setCancellationStatus('success');
+
+        // Show success message for 1.5 seconds, then close the details view
+        setTimeout(() => {
+          setSelectedReport(null);
+          setCancellationStatus(null);
+        }, 1500);
+      }, 2000);
     }
   };
 
@@ -146,6 +158,24 @@ const ViewReportsModal = ({ isOpen, onClose, reports, onCancelReport, onOpenImag
                 <FaTimes size={18} />
               </button>
             </div>
+
+            {/* Cancellation Status Overlay */}
+            {cancellationStatus && (
+              <div className="submission-overlay">
+                {cancellationStatus === 'cancelling' && (
+                  <>
+                    <div className="spinner"></div>
+                    <p>Processing Cancellation...</p>
+                  </>
+                )}
+                {cancellationStatus === 'success' && (
+                  <>
+                    <FaCheckCircle className="success-icon" size={60} />
+                    <p>Report Successfully Removed!</p>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="details-body">
               <p>

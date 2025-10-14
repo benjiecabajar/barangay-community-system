@@ -34,7 +34,7 @@
 /* 2. CONTENT BOX STYLES */
 .report-modal-content {
     background: var(--bg-primary);
-    padding: 20px;
+    padding: 22px;
     border-radius: 16px;
     width: 700px;
     top: 25px;
@@ -61,6 +61,68 @@
         opacity: 1;
         transform: translateY(0) scale(1);
     }
+}
+
+.report-modal-content .close-btn {
+    /* Ensure close button is above the submission overlay if needed */
+    z-index: 20;
+}
+
+/* --- Submission Loading Overlay --- */
+.submission-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    border-radius: 16px;
+    color: var(--text-primary);
+    text-align: center;
+    padding: 20px;
+    transition: opacity 0.3s ease;
+}
+
+[data-theme="dark"] .submission-overlay {
+    background: rgba(17, 24, 39, 0.85);
+}
+
+.submission-overlay p {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+.submission-overlay .spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--border-primary);
+    border-top-color: var(--brand-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.submission-overlay .success-icon {
+    color: #22c55e; /* Green */
+    animation: popIn 0.4s cubic-bezier(0.25, 0.25, 0.25, 1.25);
+}
+
+.submission-overlay .error-icon {
+    color: #ef4444; /* Red */
+    animation: popIn 0.4s cubic-bezier(0.25, 0.25, 0.25, 1.25);
+}
+
+.submission-overlay .submit-report-btn {
+    margin-top: 1.5rem;
+    width: auto; /* Let the button size itself */
+    padding: 12px 24px;
 }
 
 .report-modal-content::-webkit-scrollbar {
@@ -111,12 +173,12 @@
 .report-form {
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: 30px;
     flex-grow: 1;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 5px;
-    margin-top: 20px;
+    margin-top: 1px;
 }
 
 .report-form::-webkit-scrollbar {
@@ -130,9 +192,20 @@
 }
 
 /* Inputs / Textareas */
-.report-form select,
-.report-form textarea {
+.report-form select{
     width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 15px;
+    border: 1px solid var(--border-secondary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+
+.report-form textarea {
+    width: 96%;
     padding: 12px;
     border-radius: 8px;
     background: var(--bg-primary);

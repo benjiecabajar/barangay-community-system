@@ -2,7 +2,7 @@ import React from "react";
 import { FaTimes, FaBell, FaRegSadTear, FaClipboardCheck, FaBullhorn, FaFileAlt } from "react-icons/fa";
 import "../styles/modal-notification.css";
 
-const NotificationModal = ({ isOpen, onClose, notifications, onClear }) => {
+const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete }) => {
   if (!isOpen) return null;
 
   const getNotificationIcon = (type) => {
@@ -51,6 +51,9 @@ const NotificationModal = ({ isOpen, onClose, notifications, onClear }) => {
                       {new Date(notif.date).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
                     </small>
                   </div>
+                  <button className="delete-notif-btn" onClick={() => onDelete(notif.id)} title="Delete notification">
+                    <FaTimes />
+                  </button>
                 </div>
               ))}
             </div>

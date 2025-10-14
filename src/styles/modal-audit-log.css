@@ -1,0 +1,126 @@
+/* ======================================================== */
+/* AUDIT LOG MODAL STYLES */
+/* ======================================================== */
+
+.audit-log-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050; /* Higher than other modals */
+    animation: fadeInOverlay 0.3s ease;
+}
+
+.audit-log-modal-content {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    padding: 20px;
+    width: 700px;
+    max-width: 90vw;
+    height: 80vh;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    animation: slideUpModal 0.4s ease;
+}
+
+.audit-log-modal-content .modal-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.audit-log-toolbar {
+    padding: 10px 0;
+    margin-bottom: 10px;
+}
+
+.search-container {
+    position: relative;
+}
+
+.search-container .search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+}
+
+.search-container input {
+    width: 100%;
+    padding: 12px 12px 12px 45px;
+    border-radius: 10px;
+    border: 1px solid var(--border-secondary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 15px;
+    box-sizing: border-box;
+}
+
+.audit-log-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.log-item {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--brand-primary);
+}
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.log-action {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.log-user {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.log-details {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+}
+
+.log-details-json {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.no-logs-placeholder {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--text-secondary);
+    font-weight: 500;
+    gap: 8px;
+}
+
+/* Re-using some styles for consistency */
+@keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUpModal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

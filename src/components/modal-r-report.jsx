@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaTimes, FaCamera, FaUpload, FaPaperPlane, FaMapMarkerAlt, FaSyncAlt } from 'react-icons/fa'; 
+import { FaTimes, FaCamera, FaUpload, FaPaperPlane, FaMapMarkerAlt, FaSyncAlt, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa'; 
 import '../styles/modal-r-report.css';
 
 const REPORT_TYPES = [
@@ -10,7 +10,7 @@ const REPORT_TYPES = [
   'Facilities Issue',
 ];
 
-const ReportModal = ({ isOpen, onClose, onSubmit, onViewReports }) => {
+const ReportModal = ({ isOpen, onClose, onSubmit, submissionStatus }) => {
   if (!isOpen) return null;
 
   const [reportType, setReportType] = useState(REPORT_TYPES[0]);
@@ -152,13 +152,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, onViewReports }) => {
       location: location, // Include location data
     });
 
-    setReportType(REPORT_TYPES[0]);
-    setDescription('');
-    mediaPreviews.forEach(url => URL.revokeObjectURL(url));
-    setLocation(null);
-    setMediaFiles([]);
-    setMediaPreviews([]);
-    onClose();
+    // The parent component will now handle closing and resetting.
   };
 
   const handleClose = () => {
@@ -175,6 +169,29 @@ const ReportModal = ({ isOpen, onClose, onSubmit, onViewReports }) => {
   return (
     <div className="report-modal-overlay" onClick={handleClose}>
       <div className="report-modal-content" onClick={(e) => e.stopPropagation()}>
+        {submissionStatus && (
+          <div className="submission-overlay">
+            {submissionStatus === 'submitting' && (
+              <>
+                <div className="spinner"></div>
+                <p>Submitting your report...</p>
+              </>
+            )}
+            {submissionStatus === 'success' && (
+              <>
+                <FaCheckCircle className="success-icon" size={60} />
+                <p>Report Submitted Successfully!</p>
+              </>
+            )}
+            {submissionStatus === 'error' && (
+              <>
+                <FaExclamationCircle className="error-icon" size={60} />
+                <p>Something went wrong. Please try again.</p>
+                <button type="button" className="submit-report-btn" onClick={handleSubmit}>Try Again</button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Camera View */}
         {isCameraActive && (

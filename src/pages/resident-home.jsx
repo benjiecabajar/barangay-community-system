@@ -27,6 +27,7 @@ import { ThemeProvider } from "../components/ThemeContext.jsx";
 import ViewReportsModal from "../components/modal-view-reports.jsx";
 import NotificationModal from "../components/modal-notification.jsx"; // Import the new modal
 import RequestCertificationModal from "../components/modal-request-cert.jsx";
+import { logAuditAction } from "../utils/auditLogger.js";
 
 // =========================================================
 // Comment Section Component (Copied from moderator-home.jsx)
@@ -96,6 +97,8 @@ function Home() {
   const [isViewReportsModalOpen, setIsViewReportsModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState(null); // 'submitting', 'success', 'error'
   const [notifications, setNotifications] = useState(() => JSON.parse(localStorage.getItem('notifications')) || []);
   const [userReports, setUserReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
 
@@ -153,51 +156,65 @@ function Home() {
 
   const handleReportSubmit = async (reportData) => {
     // In a real app, you'd send this to a server.
-    console.log("New Report Submitted:", reportData.type, reportData.description);
+    try {
+        setSubmissionStatus('submitting');
+        console.log("New Report Submitted:", reportData.type, reportData.description);
 
-    // Convert images to data URLs for storage and display
-    const mediaUrls = await Promise.all(
-      reportData.media.map(file => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      })
-    );
+        // Wait for 2 seconds to show the loading spinner
+        setTimeout(async () => {
+            // Convert images to data URLs for storage and display
+            const mediaUrls = await Promise.all(
+                reportData.media.map(file => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                })
+            );
 
-    const newReport = {
-      id: Date.now(),
-      date: Date.now(), // Add the current date
-      status: "submitted", // Set the initial status
-      type: reportData.type,
-      description: reportData.description,
-      media: mediaUrls, // Store the array of data URLs
-      location: reportData.location, // Store location data
-    };
-    setUserReports(prev => [...prev, newReport]);
+            const newReport = {
+                id: Date.now(),
+                date: Date.now(),
+                status: "submitted",
+                type: reportData.type,
+                description: reportData.description,
+                media: mediaUrls,
+                location: reportData.location,
+            };
+            setUserReports(prev => [...prev, newReport]);
+            logAuditAction('Submitted Report', { reportId: newReport.id, type: newReport.type }, 'resident');
 
-    // --- NEW: Create a notification for the moderator ---
-    const modNotif = {
-        id: Date.now() + 1, // Ensure unique ID
-        type: 'new_report',
-        message: `A new "${newReport.type}" report has been submitted.`,
-        reportId: newReport.id,
-        isRead: false,
-        date: Date.now()
-    };
-    const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
-    localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
+            // Create a notification for the moderator
+            const modNotif = {
+                id: Date.now() + 1,
+                type: 'new_report',
+                message: `A new "${newReport.type}" report has been submitted.`,
+                reportId: newReport.id,
+                isRead: false,
+                date: Date.now()
+            };
+            const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
+            localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
 
-    setIsReportModalOpen(false); // Close modal on submit
+            setSubmissionStatus('success');
+
+            setTimeout(() => {
+                setIsReportModalOpen(false);
+                setSubmissionStatus(null);
+            }, 1500);
+        }, 2000); // 2-second delay for the spinner
+    } catch (error) {
+      console.error("Report submission failed:", error);
+      setSubmissionStatus('error');
+    }
   };
 
   const handleCancelReport = (reportId) => {
-    // Add a confirmation before deleting
-    if (window.confirm("Are you sure you want to cancel this report? This action cannot be undone.")) {
-      setUserReports(prevReports => prevReports.filter(report => report.id !== reportId));
-    }
+    // The confirmation is now handled inside the modal.
+    logAuditAction('Cancelled Report', { reportId }, 'resident');
+    setUserReports(prevReports => prevReports.filter(report => report.id !== reportId));
   };
 
   const handleCertRequestSubmit = (requestData) => {
@@ -243,6 +260,13 @@ function Home() {
         localStorage.setItem('notifications', JSON.stringify([]));
     }
   };
+
+  const handleDeleteNotification = (notificationId) => {
+    if (window.confirm("Are you sure you want to delete this notification?")) {
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    }
+  };
+
   const handleLogout = () => {
     console.log("Logging out...");
     navigate("/login");
@@ -344,12 +368,17 @@ function Home() {
       <SettingModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+        role="resident"
       />
 
       <ReportModal
         isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
+        onClose={() => {
+          setIsReportModalOpen(false);
+          setSubmissionStatus(null); // Reset status on close
+        }}
         onSubmit={handleReportSubmit}
+        submissionStatus={submissionStatus}
       />
 
       <ViewReportsModal
@@ -372,6 +401,7 @@ function Home() {
         onClose={() => setIsNotificationModalOpen(false)}
         notifications={notifications}
         onClear={handleClearNotifications}
+        onDelete={handleDeleteNotification}
       />
 
       <RequestCertificationModal

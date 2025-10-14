@@ -27,7 +27,7 @@
   background: var(--bg-primary);
   border-radius: 16px;
   padding: 20px 26px;
-  margin-top: 10px;
+  margin-top: 1px;
   width: 500px;
   max-width: 90vw;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -55,7 +55,7 @@
     color: var(--brand-primary);
 }
 
-.close-btn {
+.modal-header .close-btn {
     background: var(--bg-secondary);
     color: var(--text-secondary);
     border: none;
@@ -63,14 +63,17 @@
     width: 32px;
     height: 32px;
     cursor: pointer;
+    top:30px;
+    right:30px;
     display: flex;
     justify-content: center;
     align-items: center;
     transition: all 0.2s ease;
+    /* Remove position properties that aren't needed in flex layout */
 }
 
-.close-btn:hover {
-    background: #e5e7eb; /* A slightly darker gray for hover */
+.modal-header .close-btn:hover {
+    background: #e5e7eb;
     color: var(--text-primary);
     transform: rotate(90deg);
 }
