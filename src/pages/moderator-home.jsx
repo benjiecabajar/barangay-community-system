@@ -15,7 +15,7 @@ import Header from "../components/header.jsx";
 import ProfileModal from "../components/modal-profile.jsx";
 import SettingModal from "../components/modal-settings.jsx";
 import { ThemeProvider } from "../components/ThemeContext";
-import { logAuditAction } from "../utils/auditLogger.js";
+import { logAuditAction } from "./utils/auditLogger.js";
 
 // =========================================================
 // Comment Section Component

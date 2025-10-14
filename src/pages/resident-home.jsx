@@ -13,7 +13,7 @@ import {
   FaClipboardList,
   FaInfoCircle,
   FaBell,
-  FaTimes,
+  FaTimes,  
   FaChevronLeft,
   FaChevronRight,
   FaEllipsisH,
