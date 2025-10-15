@@ -10,12 +10,14 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 1000;  
     animation: fadeInOverlay 0.35s ease forwards;
 }
+@import './modal-base.css';
 
 .cert-modal-content {
     background: var(--bg-primary);
+    /* Inherits from .modal-content in modal-base.css */
     padding: 20px 20px 60px 20px;
     border-radius: 16px;
     margin-top: 50px;
@@ -34,6 +36,7 @@
     align-items: center;
     padding-bottom: 15px;
     border-bottom: 1px solid var(--border-primary);
+    /* Inherits from .modal-header in modal-base.css */
 }
 
 .cert-modal-content .modal-header h2 {
@@ -47,6 +50,7 @@
     color: var(--text-secondary);
     border: none;
     border-radius: 50%;
+    /* Inherits from .close-btn in modal-base.css */
     top: 30px;
     right: 30px;
     width: 32px;
@@ -188,5 +192,183 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    margin-top: 1%;
+    margin-bottom: -40px;
     gap: 10px;
+}
+
+.submit-cert-btn:disabled {
+    background: #9ca3af; /* A standard grey color */
+    box-shadow: none; /* Remove shadow for a flat look */
+    cursor: not-allowed; /* Indicate it's not clickable */
+}
+
+/* --- NEW: ID Upload and Camera Styles --- */
+
+.id-upload-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.id-upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.id-upload-container label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.evidence-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.evidence-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.evidence-btn:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.evidence-btn input[type="file"] {
+    display: none;
+}
+
+.id-preview {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-primary);
+}
+
+.id-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.remove-id-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.remove-id-btn:hover {
+    background: rgba(239, 68, 68, 0.8); /* Red */
+}
+
+.id-upload-note {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    margin-top: 10px;
+    grid-column: 1 / -1; /* Span both columns */
+    text-align: center;
+}
+
+/* Camera view styles (similar to report modal) */
+.camera-view-cert {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px; /* Match modal content */
+    overflow: hidden;
+}
+
+.camera-view-cert video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror view */
+}
+
+.camera-overlay-text {
+    position: absolute;
+    top: 20px;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Re-use camera controls from modal-r-report.css if they are global, otherwise add them here */
+/* Assuming they are not global, let's add them for completeness. */
+.camera-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.capture-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: white;
+    border: 4px solid rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+}
+
+.close-camera-btn {
+    background: none;
+    border: 2px solid white;
+    color: white;
+    cursor: pointer;
+    /* Make it a circle */
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.close-camera-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
 }

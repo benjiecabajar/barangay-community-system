@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import "../styles/login.css";
 import "../styles/sign_in.css";
 import "@fontsource/poppins";
-import { logAuditAction } from "../utils/auditLogger.js";
+import { logAuditAction } from "../utils/auditLogger";
 
 export default function SignIn() {
   const navigate = useNavigate();

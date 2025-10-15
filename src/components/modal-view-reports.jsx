@@ -15,31 +15,48 @@ import {
 import "../styles/modal-view-reports.css";
 import { useTheme } from "./ThemeContext";
 
-const ViewReportsModal = ({ isOpen, onClose, reports, onCancelReport, onOpenImage }) => {
+const ViewReportsModal = ({ isOpen, onClose, reports, onCancelReport, onDeleteReport, onOpenImage }) => {
   const { theme } = useTheme();
   const [selectedReport, setSelectedReport] = useState(null);
-  const [cancellationStatus, setCancellationStatus] = useState(null); // 'cancelling', 'success'
+  const [actionStatus, setActionStatus] = useState(null); // 'cancelling', 'deleting', 'success'
 
   if (!isOpen) return null;
 
   const handleCancelClick = () => {
-    if (selectedReport && window.confirm("Are you sure you want to cancel/delete this report? This action cannot be undone.")) {
-      setCancellationStatus('cancelling');
+    if (selectedReport && window.confirm("Are you sure you want to cancel this report?")) {
+      setActionStatus('cancelling');
 
       // Simulate a 2-second cancellation process
       setTimeout(() => {
         onCancelReport(selectedReport.id);
-        setCancellationStatus('success');
+        setActionStatus('success');
 
         // Show success message for 1.5 seconds, then close the details view
         setTimeout(() => {
           setSelectedReport(null);
-          setCancellationStatus(null);
+          setActionStatus(null);
         }, 1500);
       }, 2000);
     }
   };
 
+  const handleDeleteClick = () => {
+    if (selectedReport && window.confirm("Are you sure you want to permanently delete this report? This action cannot be undone.")) {
+      setActionStatus('deleting'); // Set status to deleting
+
+      // Simulate a 2-second deletion process
+      setTimeout(() => {
+        onDeleteReport(selectedReport.id);
+        setActionStatus('success');
+
+        // Show success message for 1.5 seconds, then close the details view
+        setTimeout(() => {
+          setSelectedReport(null);
+          setActionStatus(null);
+        }, 1500);
+      }, 2000);
+    }
+  };
 
   // 🔹 STATUS BADGE COMPONENT
   const StatusBadge = ({ status }) => {
@@ -50,6 +67,7 @@ const ViewReportsModal = ({ isOpen, onClose, reports, onCancelReport, onOpenImag
       declined: { label: "🔴 Declined – Invalid Report", className: "status-declined" },
       "in-progress": { label: "🔵 In Progress", className: "status-in-progress" },
       done: { label: "✅ Resolved / Done", className: "status-done" },
+      canceled: { label: "⚪ Canceled", className: "status-canceled" },
     };
 
     const { label, className } =
@@ -85,7 +103,7 @@ const ViewReportsModal = ({ isOpen, onClose, reports, onCancelReport, onOpenImag
   };
 
   // Sort reports from newest to oldest before rendering
-  const sortedReports = [...reports].sort((a, b) => b.date - a.date);
+  const sortedReports = reports.filter(r => !['archived', 'canceled-archived'].includes(r.status)).sort((a, b) => b.date - a.date);
 
   return (
     <div className="view-reports-modal-overlay" onClick={onClose}>
@@ -159,19 +177,25 @@ const ViewReportsModal = ({ isOpen, onClose, reports, onCancelReport, onOpenImag
               </button>
             </div>
 
-            {/* Cancellation Status Overlay */}
-            {cancellationStatus && (
+            {/* Action Status Overlay */}
+            {actionStatus && (
               <div className="submission-overlay">
-                {cancellationStatus === 'cancelling' && (
+                {actionStatus === 'cancelling' && (
                   <>
                     <div className="spinner"></div>
                     <p>Processing Cancellation...</p>
                   </>
                 )}
-                {cancellationStatus === 'success' && (
+                {actionStatus === 'deleting' && (
+                  <>
+                    <div className="spinner"></div>
+                    <p>Deleting Report...</p>
+                  </>
+                )}
+                {actionStatus === 'success' && (
                   <>
                     <FaCheckCircle className="success-icon" size={60} />
-                    <p>Report Successfully Removed!</p>
+                    <p>Action Successful!</p>
                   </>
                 )}
               </div>
@@ -249,16 +273,22 @@ const ViewReportsModal = ({ isOpen, onClose, reports, onCancelReport, onOpenImag
             </div>
 
             <div className="details-footer">
-              {!['done', 'declined'].includes(selectedReport.status) && (
+              {/* Show Cancel button for active reports */}
+              {['submitted', 'reviewed', 'in-progress', 'approved'].includes(selectedReport.status) ? (
                 <button className="cancel-report-btn" onClick={handleCancelClick}>
                   <FaBan /> Cancel Report
                 </button>
-              )}
-              {['done', 'declined'].includes(selectedReport.status) && (
-                <button className="delete-report-btn" onClick={handleCancelClick}>
+              ) : selectedReport.status === 'canceled' ? (
+                // If report is canceled, show the permanent delete button
+                <button className="delete-report-btn resident-delete" onClick={handleDeleteClick}>
+                  <FaTrash /> Delete Permanently
+                </button>
+              ) : ['done', 'declined'].includes(selectedReport.status) ? (
+                // For other non-active reports, show a simple delete button
+                <button className="delete-report-btn" onClick={handleDeleteClick}>
                   <FaTrash /> Delete Report
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

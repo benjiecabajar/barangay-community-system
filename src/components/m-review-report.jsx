@@ -14,8 +14,34 @@ import {
 } from "react-icons/fa";
 import "../styles/modal-view-reports.css"; // Reuse the same styles
 
+const StatusBadge = ({ status }) => {
+  const statusInfo = {
+    submitted: { label: "🟡 Pending Review", className: "status-submitted" },
+    reviewed: { label: "🟠 Under Review", className: "status-reviewed" },
+    approved: { label: "🟢 Approved", className: "status-approved" },
+    "in-progress": { label: "🔵 In Progress", className: "status-in-progress" },
+    done: { label: "✅ Resolved", className: "status-done" },
+    declined: { label: "🔴 Declined", className: "status-declined" },
+    canceled: { label: "⚪ Canceled", className: "status-canceled" },
+  };
+  const { label, className } = statusInfo[status] || { label: status, className: "status-default" };
+  return <span className={`status-badge ${className}`}>{label}</span>;
+};
+
+const REPORT_FILTER_TYPES = [
+  'All',
+  'General Maintenance',
+  'Safety Hazard',
+  'Noise Complaint',
+  'Pest Control',
+  'Facilities Issue',
+];
+
 const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onDeleteReport }) => {
   const [selectedReport, setSelectedReport] = useState(null);
+  const [activeTab, setActiveTab] = useState('Pending');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('All');
 
   // State for the image preview modal
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -58,21 +84,32 @@ const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onD
   const nextImage = (e) => { e.stopPropagation(); setCurrentImageIndex((prev) => (prev + 1) % modalImages.length); };
   const prevImage = (e) => { e.stopPropagation(); setCurrentImageIndex((prev) => (prev - 1 + modalImages.length) % modalImages.length); };
 
-  const StatusBadge = ({ status }) => {
-    const statusInfo = {
-      submitted: { label: "🟡 Pending Review", className: "status-submitted" },
-      reviewed: { label: "🟠 Under Review", className: "status-reviewed" },
-      approved: { label: "🟢 Approved", className: "status-approved" },
-      "in-progress": { label: "🔵 In Progress", className: "status-in-progress" },
-      done: { label: "✅ Resolved", className: "status-done" },
-      declined: { label: "🔴 Declined", className: "status-declined" },
-    };
-    const { label, className } = statusInfo[status] || { label: status, className: "status-default" };
-    return <span className={`status-badge ${className}`}>{label}</span>;
-  };
+  // --- Filtering Logic ---
+  const filteredReports = reports.filter(report => {
+    const matchesSearch = searchTerm === '' || report.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'All' || report.type === filterType;
+    return matchesSearch && matchesType;
+  });
 
-  // Sort reports from newest to oldest before rendering
-  const sortedReports = [...reports].sort((a, b) => b.date - a.date);
+  // --- Categorization Logic (uses filtered reports) ---
+  const pendingReports = filteredReports.filter(r => ['submitted', 'reviewed'].includes(r.status)).sort((a, b) => b.date - a.date);
+  const approvedReports = filteredReports.filter(r => r.status === 'approved').sort((a, b) => b.date - a.date);
+  const inProgressReports = filteredReports.filter(r => r.status === 'in-progress').sort((a, b) => b.date - a.date);
+  const resolvedReports = filteredReports.filter(r => r.status === 'done').sort((a, b) => b.date - a.date);
+  const otherReports = filteredReports.filter(r => ['declined', 'canceled'].includes(r.status)).sort((a, b) => b.date - a.date);
+
+  const renderReportList = (reportList, emptyMessage) => {
+    if (reports.length === 0) {
+        return (
+            <div className="no-reports-placeholder">
+                <FaRegSadTear size={50} />
+                <h3>No Reports to Review</h3>
+                <p>New reports from residents will appear here.</p>
+            </div>
+        );
+    }
+    return reportList.length > 0 ? reportList.map(report => <ReportCard key={report.id} report={report} onSelect={() => handleSelectReport(report)} />) : <p className="empty-category-message">{emptyMessage}</p>;
+  };
 
   return (
     <div className="view-reports-modal-overlay" onClick={onClose}>
@@ -85,27 +122,50 @@ const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onD
         <div className="reports-body">
           {!selectedReport ? (
             // List View
-            sortedReports.length === 0 ? (
-              <div className="no-reports-placeholder">
-                <FaRegSadTear size={50} />
-                <h3>No Reports to Review</h3>
-                <p>New reports from residents will appear here.</p>
+            <>
+              <div className="filter-bar">
+                <input
+                  type="text"
+                  placeholder="Search in description..."
+                  className="filter-search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <select
+                  className="filter-select"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                >
+                  {REPORT_FILTER_TYPES.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              sortedReports.map((report) => (
-                <div key={report.id} className="report-card clickable" onClick={() => handleSelectReport(report)}>
-                  <div className="report-card-header">
-                    <h3>{report.type}</h3>
-                    <FaEye className="view-icon" />
-                  </div>
-                  <p className="report-card-description">{report.description.slice(0, 100)}...</p>
-                  <div className="report-card-footer">
-                    <StatusBadge status={report.status} />
-                    <small className="report-date">{new Date(report.date).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</small>
-                  </div>
-                </div>
-              ))
-            )
+              <div className="certs-tabs">
+                <button className={`tab-btn ${activeTab === 'Pending' ? 'active' : ''}`} onClick={() => setActiveTab('Pending')}>
+                  Pending ({pendingReports.length})
+                </button>
+                <button className={`tab-btn ${activeTab === 'Approved' ? 'active' : ''}`} onClick={() => setActiveTab('Approved')}>
+                  Approved ({approvedReports.length})
+                </button>
+                <button className={`tab-btn ${activeTab === 'In Progress' ? 'active' : ''}`} onClick={() => setActiveTab('In Progress')}>
+                  In Progress ({inProgressReports.length})
+                </button>
+                <button className={`tab-btn ${activeTab === 'Resolved' ? 'active' : ''}`} onClick={() => setActiveTab('Resolved')}>
+                  Resolved ({resolvedReports.length})
+                </button>
+                <button className={`tab-btn ${activeTab === 'Other' ? 'active' : ''}`} onClick={() => setActiveTab('Other')}>
+                  Declined/Canceled ({otherReports.length})
+                </button>
+              </div>
+              <div className="certs-tab-content">
+                {activeTab === 'Pending' && renderReportList(pendingReports, "No pending reports.")}
+                {activeTab === 'Approved' && renderReportList(approvedReports, "No approved reports.")}
+                {activeTab === 'In Progress' && renderReportList(inProgressReports, "No active reports.")}
+                {activeTab === 'Resolved' && renderReportList(resolvedReports, "No resolved reports.")}
+                {activeTab === 'Other' && renderReportList(otherReports, "No declined or canceled reports.")}
+              </div>
+            </>
           ) : (
             // Detail View
             <div className="details-body" style={{ overflowY: 'auto', paddingRight: '10px' }}>
@@ -146,29 +206,30 @@ const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onD
                   <button 
                     className="action-btn approve" 
                     onClick={() => handleStatusUpdate('approved')}
-                    disabled={['approved', 'in-progress', 'done', 'declined'].includes(selectedReport.status)}
+                    disabled={['approved', 'in-progress', 'done', 'declined', 'canceled'].includes(selectedReport.status)}
                   ><FaCheckCircle /> Approve</button>
                   <button 
                     className="action-btn decline" 
                     onClick={() => handleStatusUpdate('declined')}
-                    disabled={['done', 'declined'].includes(selectedReport.status)}
+                    disabled={['done', 'declined', 'canceled'].includes(selectedReport.status)}
                   ><FaBan /> Decline</button>
                 </div>
                 <div className="secondary-actions">
                   <button 
                     className="action-btn progress" 
                     onClick={() => handleStatusUpdate('in-progress')}
-                    disabled={!['approved'].includes(selectedReport.status)}
+                    disabled={!['approved'].includes(selectedReport.status) || selectedReport.status === 'canceled'}
                   ><FaTools /> Mark as In Progress</button>
                   <button 
                     className="action-btn resolve" 
                     onClick={() => handleStatusUpdate('done')}
-                    disabled={!['approved', 'in-progress'].includes(selectedReport.status)}
-                  ><FaClipboardCheck /> Mark as Resolved</button>
+                    disabled={!['approved', 'in-progress'].includes(selectedReport.status) || selectedReport.status === 'canceled'}
+                  ><FaClipboardCheck /> Mark Resolved</button>
                 </div>
-                {['done', 'declined'].includes(selectedReport.status) && (
-                  <button className="delete-report-btn moderator-delete" onClick={handleDeleteClick}>
-                    <FaTrash /> Delete Report from System
+                {/* --- NEW: Permanent Delete Button --- */}
+                {['done', 'declined', 'canceled'].includes(selectedReport.status) && (
+                  <button className="delete-report-btn permanent-delete" onClick={handleDeleteClick}>
+                    <FaTrash /> Permanently Delete Report
                   </button>
                 )}
               </div>
@@ -195,5 +256,21 @@ const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onD
     </div>
   );
 };
+
+const ReportCard = ({ report, onSelect }) => (
+    <div className="report-card clickable" onClick={onSelect}>
+        <div className="report-card-header">
+            <h3>{report.type}</h3>
+            <FaEye className="view-icon" />
+        </div>
+        <p className="report-card-description">{report.description.slice(0, 100)}...</p>
+        <div className="report-card-footer">
+            <StatusBadge status={report.status} />
+            <small className="report-date">
+                {new Date(report.date).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+            </small>
+        </div>
+    </div>
+);
 
 export default ReviewReportModal;

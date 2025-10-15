@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Calendar from "react-calendar"; 
 import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
@@ -6,6 +6,8 @@ import "../styles/moderator-home.css";
 // Import only icons needed in ModeratorHome (sidebar, posts, modals, etc.)
 import { FaUser, FaBullhorn, FaFileAlt, FaHeadset, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell, FaEdit, FaTrash } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md"; 
+import ReviewCertsModal from "../components/m-review-certs.jsx";
+import AnalyticsDashboard from "../components/m-analytics-dashboard.jsx";
 import "../styles/m-create-post.css";
 import ReviewReportModal from "../components/m-review-report.jsx"; // Import the new modal
 import PostModal from "../components/m-create-post.jsx";
@@ -15,7 +17,7 @@ import Header from "../components/header.jsx";
 import ProfileModal from "../components/modal-profile.jsx";
 import SettingModal from "../components/modal-settings.jsx";
 import { ThemeProvider } from "../components/ThemeContext";
-import { logAuditAction } from "./utils/auditLogger.js";
+import { logAuditAction } from "../utils/auditLogger.js";
 
 // =========================================================
 // Comment Section Component
@@ -80,8 +82,8 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
                             <span style={{ fontWeight: '600', fontSize: '13px', color: '#111827' }}>
                                 {comment.author} 
                             </span>
-                            <span style={{ fontSize: '12px', color: '#6b7280', marginLeft: '8px' }}>
-                                {comment.date}
+                            <span className="comment-date">
+                                {new Date(comment.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                             </span>
                             <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.4', color: '#374151' }}>
                                 {comment.text}
@@ -142,7 +144,7 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
 // =========================================================
 const MainContentFeed = ({ posts, handleDeletePost, handleEditClick, renderPostImages, openImageModal, handleAddComment, openMenuPostId, setOpenMenuPostId }) => {
     return (
-        <main className="main-content">
+        <div className="feed-content">
             {/* Posts Feed - Social Media Style */}
             {posts.map((post) => (
                 <div className="update-card" key={post.id}>
@@ -150,7 +152,9 @@ const MainContentFeed = ({ posts, handleDeletePost, handleEditClick, renderPostI
                         <img src={post.authorAvatar} alt="n/a" className="author-avatar" />
                         <div className="post-info">
                             <span className="author-name">{post.author}</span>
-                            <span className="post-time">{post.date}</span>
+                            <span className="post-time">
+                              {new Date(post.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                            </span>
                         </div>
                             <div className="post-actions-container">
                                 <button className="options-btn" onClick={() => setOpenMenuPostId(openMenuPostId === post.id ? null : post.id)}>
@@ -197,7 +201,7 @@ const MainContentFeed = ({ posts, handleDeletePost, handleEditClick, renderPostI
                 <p>Stay tuned! Updates from your barangay will appear here.</p>
                 </div>
             )}
-        </main>
+        </div>
     );
 };
 
@@ -221,12 +225,16 @@ function ModeratorHome() {
     const [openMenuPostId, setOpenMenuPostId] = useState(null);
     const [editingPost, setEditingPost] = useState(null); // State to track the post being edited
     const [isReviewReportModalOpen, setIsReviewReportModalOpen] = useState(false);
+    const [isReviewCertsModalOpen, setIsReviewCertsModalOpen] = useState(false);
     const [allReports, setAllReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
+    const [certificationRequests, setCertificationRequests] = useState(() => JSON.parse(localStorage.getItem('certificationRequests')) || []);
 
     // State for Image Preview Modal (for existing posts)
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [modalImages, setModalImages] = useState([]);
+    const [activeMainTab, setActiveMainTab] = useState('feed'); // 'feed' or 'analytics'
+    const newCertsCount = certificationRequests.filter(req => req.status === 'Pending').length;
 
     // Load data and listen for changes
     useEffect(() => {
@@ -234,11 +242,12 @@ function ModeratorHome() {
             setPosts(JSON.parse(localStorage.getItem("announcements")) || []);
             setAllReports(JSON.parse(localStorage.getItem("userReports")) || []);
             setModeratorNotifications(JSON.parse(localStorage.getItem("moderatorNotifications")) || []);
+            setCertificationRequests(JSON.parse(localStorage.getItem("certificationRequests")) || []);
         };
         loadData();
 
         const handleStorageChange = (e) => {
-            if (['announcements', 'userReports', 'moderatorNotifications'].includes(e.key)) {
+            if (['announcements', 'userReports', 'moderatorNotifications', 'certificationRequests'].includes(e.key)) {
                 loadData();
             }
         };
@@ -273,7 +282,7 @@ function ModeratorHome() {
                 images,
                 author: "Community Moderator", 
                 authorAvatar: "https://via.placeholder.com/48/2563eb/ffffff?text=M",
-                date: new Date().toLocaleString(),
+                date: Date.now(), // Store date as a timestamp
                 comments: [], // Initialize comments array
             };
             setPosts([newPost, ...posts]);
@@ -329,11 +338,13 @@ function ModeratorHome() {
         setIsPostModalOpen(true);
     };
 
-    const handleDeleteReport = (reportId) => {
+    const handlePermanentDeleteReport = (reportId) => {
         if (window.confirm("Are you sure you want to permanently delete this report?")) {
             const updatedReports = allReports.filter(report => report.id !== reportId);
             logAuditAction('Deleted Report', { reportId }, 'moderator');
             setAllReports(updatedReports);
+            // Also update localStorage to persist deletion
+            localStorage.setItem("userReports", JSON.stringify(updatedReports));
         }
     };
 
@@ -361,6 +372,41 @@ function ModeratorHome() {
         };
         const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
         localStorage.setItem('notifications', JSON.stringify([notif, ...currentNotifs]));
+    };
+
+    const handleUpdateCertRequestStatus = (requestId, newStatus) => {
+        let requestToUpdate;
+        const updatedRequests = certificationRequests.map(req => {
+            if (req.id === requestId) {
+                requestToUpdate = { ...req, status: newStatus };
+                return requestToUpdate;
+            }
+            return req;
+        });
+        setCertificationRequests(updatedRequests);
+        logAuditAction('Updated Certificate Request Status', { requestId, newStatus }, 'moderator');
+        localStorage.setItem("certificationRequests", JSON.stringify(updatedRequests));
+
+        // Create a notification for the resident
+        const notif = {
+            id: Date.now() + 1,
+            type: 'cert_update',
+            message: `Your request for "${requestToUpdate.type}" has been ${newStatus.toLowerCase()}.`,
+            requestId: requestId,
+            isRead: false,
+            date: Date.now()
+        };
+        const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
+        localStorage.setItem('notifications', JSON.stringify([notif, ...currentNotifs]));
+    };
+
+    const handleDeleteCertRequest = (requestId) => {
+        if (window.confirm("Are you sure you want to permanently delete this certificate request?")) {
+            const updatedRequests = certificationRequests.filter(req => req.id !== requestId);
+            setCertificationRequests(updatedRequests);
+            localStorage.setItem("certificationRequests", JSON.stringify(updatedRequests));
+            logAuditAction('Permanently Deleted Certificate Request', { requestId }, 'moderator');
+        }
     };
 
     const handleOpenNotifications = () => {
@@ -406,7 +452,7 @@ function ModeratorHome() {
         const newComment = {
             author: "User/Resident Placeholder", 
             authorAvatar: "https://via.placeholder.com/30/cccccc/ffffff?text=U",
-            date: new Date().toLocaleString(),
+            date: Date.now(), // Store date as a timestamp
             text: commentText,
         };
 
@@ -559,7 +605,15 @@ function ModeratorHome() {
                 onClose={() => setIsReviewReportModalOpen(false)}
                 reports={allReports}
                 onUpdateReportStatus={handleUpdateReportStatus}
-                onDeleteReport={handleDeleteReport}
+                onDeleteReport={handlePermanentDeleteReport}
+            />
+
+            <ReviewCertsModal
+                isOpen={isReviewCertsModalOpen}
+                onClose={() => setIsReviewCertsModalOpen(false)}
+                requests={certificationRequests}
+                onUpdateStatus={handleUpdateCertRequestStatus}
+                onDeleteRequest={handleDeleteCertRequest}
             />
 
             <NotificationModal
@@ -602,9 +656,15 @@ function ModeratorHome() {
                             <span>Create Announcement</span>
                         </button>
                         
-                        <button className="m-sidebar-btn teal">
+                        <button 
+                            className="m-sidebar-btn teal"
+                            onClick={() => setIsReviewCertsModalOpen(true)}
+                        >
                             <MdOutlineAssignment size={30} />
                             <span>Certification Requests</span>
+                            {newCertsCount > 0 && (
+                                <span className="notification-badge">{newCertsCount}</span>
+                            )}
                         </button>
 
                         <button 
@@ -628,26 +688,42 @@ function ModeratorHome() {
                         >
                             <FaCog size={30} />
                             <span>Settings</span>
-                        </button>
 
-                        <button className="m-sidebar-btn soft-teal">
-                            <FaInfoCircle size={30} />
-                            <span>About Us</span>
                         </button>
                     </div>
                 </aside>
 
                 {/* Main Content Feed Component */}
-                <MainContentFeed
-                    posts={posts}
-                    handleDeletePost={handleDeletePost}
-                    handleEditClick={handleEditClick}
-                    renderPostImages={renderPostImages}
-                    openImageModal={openImageModal}
-                    openMenuPostId={openMenuPostId}
-                    setOpenMenuPostId={setOpenMenuPostId}
-                    handleAddComment={handleAddComment}
-                />
+                <main className="main-content">
+                    <div className="main-content-tabs">
+                        <button 
+                            className={`main-tab-btn ${activeMainTab === 'feed' ? 'active' : ''}`}
+                            onClick={() => setActiveMainTab('feed')}
+                        >
+                            Announcements Feed
+                        </button>
+                        <button 
+                            className={`main-tab-btn ${activeMainTab === 'analytics' ? 'active' : ''}`}
+                            onClick={() => setActiveMainTab('analytics')}
+                        >
+                            Dashboard & Analytics
+                        </button>
+                    </div>
+                    {activeMainTab === 'feed' ? (
+                        <MainContentFeed
+                            posts={posts}
+                            handleDeletePost={handleDeletePost}
+                            handleEditClick={handleEditClick}
+                            renderPostImages={renderPostImages}
+                            openImageModal={openImageModal}
+                            openMenuPostId={openMenuPostId}
+                            setOpenMenuPostId={setOpenMenuPostId}
+                            handleAddComment={handleAddComment}
+                        />
+                    ) : (
+                        <AnalyticsDashboard reports={allReports} requests={certificationRequests} />
+                    )}
+                </main>
 
                 {/* Right Sidebar */}
                 <aside className="right-panel">

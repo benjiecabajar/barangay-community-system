@@ -8,8 +8,10 @@ const DEFAULT_PROFILE = {
   name: "Benjie Cabajar",
   username: "benjo",
   email: "bjc@domain.com",
-  barangay: "Villanueva",
+  municipality: "Villanueva",
+  barangay: "Poblacion",
   role: "Resident",
+  birthDate: "January 1, 1990",
   joinDate: "Jan 10, 2023",
   avatar: defaultAvatar, // Use the imported local image
 };
@@ -113,8 +115,16 @@ const ProfileModal = ({ isOpen, onClose, onLogout }) => {
             <span className="value">{userProfile.role}</span>
           </div>
           <div className="info-row">
+            <span className="label">Municipality</span>
+            <span className="value">{userProfile.municipality}</span>
+          </div>
+          <div className="info-row">
             <span className="label">Barangay</span>
             <span className="value">{userProfile.barangay}</span>
+          </div>
+          <div className="info-row">
+            <span className="label">Birth Date</span>
+            <span className="value">{userProfile.birthDate}</span>
           </div>
           <div className="info-row">
             <span className="label">Email</span>

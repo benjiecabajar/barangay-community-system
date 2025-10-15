@@ -201,7 +201,9 @@ const ReportModal = ({ isOpen, onClose, onSubmit, submissionStatus }) => {
               <button type="button" className="close-camera-btn" onClick={stopCamera}>
                 Cancel
               </button>
-              <button type="button" className="capture-btn" onClick={takePicture}></button>
+              <button type="button" className="capture-btn" onClick={takePicture}>
+                <FaCamera size={24} />
+              </button>
             </div>
           </div>
         )}

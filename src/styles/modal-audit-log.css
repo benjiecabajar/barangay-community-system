@@ -1,85 +1,89 @@
-/* ======================================================== */
-/* AUDIT LOG MODAL STYLES */
-/* ======================================================== */
-
+/* Reusing styles from modal-notification.css for consistency */
 .audit-log-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(12px);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1050; /* Higher than other modals */
-    animation: fadeInOverlay 0.3s ease;
+    z-index: 1010; /* Higher than settings modal */
+    animation: fadeInOverlay 0.3s ease forwards;
 }
 
 .audit-log-modal-content {
     background: var(--bg-primary);
     border-radius: 16px;
-    padding: 20px;
-    width: 700px;
+    padding: 20px 24px;
+    width: 600px;
+    height: 600px;
     max-width: 90vw;
-    height: 80vh;
+    max-height: 85vh;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
-    animation: slideUpModal 0.4s ease;
+    animation: slideUpModal 0.35s ease forwards;
+}
+
+.audit-log-modal-content .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-primary);
 }
 
 .audit-log-modal-content .modal-header h2 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--brand-primary);
 }
 
-.audit-log-toolbar {
-    padding: 10px 0;
-    margin-bottom: 10px;
-}
-
-.search-container {
-    position: relative;
-}
-
-.search-container .search-icon {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-tertiary);
-}
-
-.search-container input {
-    width: 100%;
-    padding: 12px 12px 12px 45px;
-    border-radius: 10px;
-    border: 1px solid var(--border-secondary);
+.audit-log-modal-content .close-btn {
     background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.audit-log-modal-content .close-btn:hover {
+    background: #e5e7eb;
     color: var(--text-primary);
-    font-size: 15px;
-    box-sizing: border-box;
+    transform: rotate(90deg);
 }
 
 .audit-log-body {
     flex-grow: 1;
     overflow-y: auto;
+    margin-top: 1rem;
     padding-right: 10px;
 }
 
-.log-item {
-    background: var(--bg-secondary);
+.audit-log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.audit-log-item {
+    padding: 12px;
     border-radius: 8px;
-    padding: 12px 15px;
-    margin-bottom: 10px;
-    border-left: 4px solid var(--brand-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
 }
 
 .log-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .log-action {
@@ -87,40 +91,76 @@
     color: var(--text-primary);
 }
 
-.log-user {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-.log-details {
+.log-timestamp {
     font-size: 0.8rem;
     color: var(--text-tertiary);
 }
 
-.log-details-json {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-primary);
-    border-radius: 6px;
-    padding: 8px;
+.log-meta {
+    margin-bottom: 8px;
+}
+
+.log-user {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.log-details {
     margin-top: 8px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.75rem;
-    white-space: pre-wrap;
+    padding-left: 12px;
+    border-left: 2px solid var(--border-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.log-detail-item {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
     word-break: break-all;
-    max-height: 150px;
-    overflow-y: auto;
+}
+
+.log-detail-item span {
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .no-logs-placeholder {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 100%;
     color: var(--text-secondary);
-    font-weight: 500;
+    text-align: center;
+    padding: 2rem;
+    gap: 1rem;
+}
+
+.audit-log-modal-content .modal-footer {
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-primary);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.audit-log-modal-content .clear-all-btn {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
     gap: 8px;
 }
 
-/* Re-using some styles for consistency */
-@keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUpModal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.audit-log-modal-content .clear-all-btn:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: translateY(-1px);
+}

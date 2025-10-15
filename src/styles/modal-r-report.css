@@ -407,36 +407,28 @@ input[type="file"] {
 /* 8. CAMERA VIEW - MODERNIZED */
 /* ======================================================== */
 .camera-view {
-    position: absolute;
+    position: fixed; /* Changed from absolute to fixed for full-screen overlay */
     inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.92) 0%, rgba(10,10,10,0.95) 100%);
-    z-index: 30;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10; /* Ensure it's above the modal overlay */
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     align-items: center;
-    padding: 20px 0;
-    border-radius: 16px;
-    overflow: hidden;
-    backdrop-filter: blur(8px);
+    justify-content: center;
     animation: fadeInCamera 0.35s ease-in-out;
 }
 
 /* 🔹 Camera fade-in animation */
 @keyframes fadeInCamera {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .camera-view video {
     width: 100%;
-    max-width: 95%;
-    max-height: calc(100% - 120px);
-    border-radius: 12px;
-    object-fit: contain;
+    height: 100%;
+    object-fit: cover; /* Changed from contain to cover the full screen */
     transform: scaleX(-1); /* Inverts the camera feed horizontally */
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
 }
 
 /* ======================================================== */

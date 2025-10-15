@@ -3,7 +3,7 @@ import "../styles/login.css";
 import "@fontsource/poppins";
 import { FaUser, FaLock } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import { logAuditAction } from "./utils/auditLogger.js";
+import { logAuditAction } from "../utils/auditLogger";
 
 
 function Login() {

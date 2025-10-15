@@ -1,6 +1,6 @@
 // pages/Home.jsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Calendar from "react-calendar"; 
 import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
@@ -13,7 +13,7 @@ import {
   FaClipboardList,
   FaInfoCircle,
   FaBell,
-  FaTimes,  
+  FaTimes,
   FaChevronLeft,
   FaChevronRight,
   FaEllipsisH,
@@ -64,8 +64,10 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
           <div key={index} className="comment" style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '8px 0' }}>
             <img src={comment.authorAvatar} alt="avatar" style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover' }} />
             <div>
-              <span style={{ fontWeight: '600', fontSize: '13px', color: '#111827' }}>{comment.author}</span>
-              <span style={{ fontSize: '12px', color: '#6b7280', marginLeft: '8px' }}>{comment.date}</span>
+              <span style={{ fontWeight: '600', fontSize: '13px', color: '#111827' }}>{comment.author}</span>              
+              <span className="comment-date">
+                {new Date(comment.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+              </span>
               <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.4', color: '#374151' }}>{comment.text}</p>
             </div>
           </div>
@@ -140,7 +142,7 @@ function Home() {
     const newComment = {
       author: "Resident User", // Placeholder for logged-in user
       authorAvatar: "https://via.placeholder.com/30/7c3aed/ffffff?text=R",
-      date: new Date().toLocaleString(),
+      date: Date.now(), // Store date as a timestamp
       text: commentText,
     };
 
@@ -212,9 +214,31 @@ function Home() {
   };
 
   const handleCancelReport = (reportId) => {
-    // The confirmation is now handled inside the modal.
-    logAuditAction('Cancelled Report', { reportId }, 'resident');
-    setUserReports(prevReports => prevReports.filter(report => report.id !== reportId));
+    // Instead of deleting, update the status to 'canceled'.
+    // This preserves the report for the moderator's view.
+    setUserReports(prevReports =>
+      prevReports.map(report =>
+        report.id === reportId ? { ...report, status: 'canceled' } : report
+      )
+    );
+    // The useEffect hook will save this change to localStorage.
+    logAuditAction('Canceled Report by Resident', { reportId }, 'resident');
+  };
+
+  const handleDeleteReport = (reportId) => {
+    if (window.confirm("Are you sure you want to permanently delete this report? This action cannot be undone.")) {
+      setUserReports(prevReports => {
+        return prevReports.map(report => {
+          if (report.id === reportId) {
+            // If it's already canceled, use a special archived status. Otherwise, use the standard 'archived'.
+            const newStatus = report.status === 'canceled' ? 'canceled-archived' : 'archived';
+            return { ...report, status: newStatus };
+          }
+          return report;
+        });
+      });
+      logAuditAction('Archived Report by Resident', { reportId }, 'resident');
+    }
   };
 
   const handleCertRequestSubmit = (requestData) => {
@@ -386,6 +410,7 @@ function Home() {
         onClose={() => setIsViewReportsModalOpen(false)}
         reports={userReports}
         onCancelReport={handleCancelReport}
+        onDeleteReport={handleDeleteReport}
         onOpenImage={openImageModal}
       />
 
@@ -472,7 +497,7 @@ function Home() {
                   <img src={post.authorAvatar} alt="author avatar" className="author-avatar" />
                   <div className="post-info">
                     <span className="author-name">{post.author}</span>
-                    <span className="post-time">{post.date}</span>
+                    <span className="post-time">{new Date(post.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                   <button className="options-btn" title="Post Options">
                     <FaEllipsisH size={18} />

@@ -19,6 +19,7 @@ const PostModal = ({
 }) => {
   if (!isOpen) return null;
 
+  // This function resets the form fields and closes the modal.
   const handleClose = () => {
     setTitle("");
     setDescription("");
