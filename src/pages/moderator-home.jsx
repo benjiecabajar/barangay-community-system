@@ -223,13 +223,12 @@ function ModeratorHome() {
     const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
     const [moderatorNotifications, setModeratorNotifications] = useState(() => JSON.parse(localStorage.getItem('moderatorNotifications')) || []);
     const [openMenuPostId, setOpenMenuPostId] = useState(null);
-    const [editingPost, setEditingPost] = useState(null); // State to track the post being edited
+    const [editingPost, setEditingPost] = useState(null); 
     const [isReviewReportModalOpen, setIsReviewReportModalOpen] = useState(false);
     const [isReviewCertsModalOpen, setIsReviewCertsModalOpen] = useState(false);
     const [allReports, setAllReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
     const [certificationRequests, setCertificationRequests] = useState(() => JSON.parse(localStorage.getItem('certificationRequests')) || []);
 
-    // State for Image Preview Modal (for existing posts)
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [modalImages, setModalImages] = useState([]);
@@ -429,6 +428,16 @@ function ModeratorHome() {
             const updatedNotifications = moderatorNotifications.filter(n => n.id !== notificationId);
             setModeratorNotifications(updatedNotifications);
             localStorage.setItem('moderatorNotifications', JSON.stringify(updatedNotifications));
+        }
+    };
+
+    const handleClearAllDashboardData = () => {
+        if (window.confirm("DANGER: Are you sure you want to permanently delete ALL reports and certificate requests? This action cannot be undone.")) {
+            setAllReports([]);
+            setCertificationRequests([]);
+            localStorage.removeItem('userReports');
+            localStorage.removeItem('certificationRequests');
+            logAuditAction('Cleared All Dashboard Data (Reports & Requests)', {}, 'moderator');
         }
     };
 
@@ -709,7 +718,12 @@ function ModeratorHome() {
                             Dashboard & Analytics
                         </button>
                     </div>
-                    {activeMainTab === 'feed' ? (
+                    {activeMainTab === 'analytics' ? (
+                        <AnalyticsDashboard 
+                            reports={allReports} 
+                            requests={certificationRequests} 
+                            onClearAllData={handleClearAllDashboardData} />
+                    ) : (
                         <MainContentFeed
                             posts={posts}
                             handleDeletePost={handleDeletePost}
@@ -720,8 +734,6 @@ function ModeratorHome() {
                             setOpenMenuPostId={setOpenMenuPostId}
                             handleAddComment={handleAddComment}
                         />
-                    ) : (
-                        <AnalyticsDashboard reports={allReports} requests={certificationRequests} />
                     )}
                 </main>
 

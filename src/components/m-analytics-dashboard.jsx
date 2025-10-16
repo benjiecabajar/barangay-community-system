@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  FaFileAlt, FaCertificate, FaClock, FaCheckCircle, FaTimesCircle
+  FaFileAlt, FaCertificate, FaClock, FaCheckCircle, FaTimesCircle, FaTools
 } from "react-icons/fa";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
@@ -28,6 +28,10 @@ const ChartCard = ({ title, data }) => {
         return '#f97316'; // orange
       case 'resolved':
         return '#3b82f6'; // blue
+      case 'in progress':
+        return '#8b5cf6'; // violet
+      case 'canceled':
+        return '#6b7280'; // gray
       default:
         return '#8884d8'; // default recharts color
     }
@@ -54,24 +58,40 @@ const ChartCard = ({ title, data }) => {
 };
 
 const AnalyticsDashboard = ({ reports, requests }) => {
-  const [timeRange, setTimeRange] = useState('all'); // 'daily', 'weekly', 'monthly', 'all'
+  const [timeRange, setTimeRange] = useState('all'); // 'today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'all'
 
   const filteredData = useMemo(() => {
     const now = new Date();
-    const nowTime = now.getTime();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(startOfToday);
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+
+    // Assuming week starts on Sunday (0)
+    const dayOfWeek = now.getDay();
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
     const filterByRange = (item) => {
       const itemTime = item.date; // item.date is already a timestamp
       switch (timeRange) {
-        case 'daily':
-          return itemTime >= startOfToday;
-        case 'weekly':
-          const oneWeekAgo = nowTime - 7 * 24 * 60 * 60 * 1000;
-          return itemTime >= oneWeekAgo;
-        case 'monthly':
-          const oneMonthAgo = nowTime - 30 * 24 * 60 * 60 * 1000;
-          return itemTime >= oneMonthAgo;
+        case 'today':
+          return itemTime >= startOfToday.getTime();
+        case 'yesterday':
+          return itemTime >= startOfYesterday.getTime() && itemTime < startOfToday.getTime();
+        case 'this_week':
+          return itemTime >= startOfWeek.getTime();
+        case 'last_week':
+          return itemTime >= startOfLastWeek.getTime() && itemTime < startOfWeek.getTime();
+        case 'this_month':
+          return itemTime >= startOfMonth.getTime();
+        case 'last_month':
+          return itemTime >= startOfLastMonth.getTime() && itemTime < startOfMonth.getTime();
         case 'all':
         default:
           return true;
@@ -85,61 +105,143 @@ const AnalyticsDashboard = ({ reports, requests }) => {
   }, [reports, requests, timeRange]);
 
   const reportStats = {
-    total: filteredData.reports.length,
+    total: timeRange === 'all' ? reports.length : filteredData.reports.length,
     resolved: filteredData.reports.filter(r => ['done', 'archived'].includes(r.status)).length,
     pending: filteredData.reports.filter(r => ['submitted', 'reviewed'].includes(r.status)).length,
-    approved: filteredData.reports.filter(r => ['approved', 'in-progress', 'done', 'archived'].includes(r.status) && r.status !== 'canceled').length,
+    inProgress: filteredData.reports.filter(r => r.status === "in-progress").length,
+    approved: filteredData.reports.filter(r => r.status === "approved").length,
     declined: filteredData.reports.filter(r => r.status === "declined").length,
     canceled: filteredData.reports.filter(r => ['canceled', 'canceled-archived'].includes(r.status)).length,
   };
 
   const certStats = {
-    total: filteredData.requests.length,
+    total: timeRange === 'all' ? requests.length : filteredData.requests.length,
     pending: filteredData.requests.filter(r => r.status === "Pending").length,
     approved: filteredData.requests.filter(r => r.status === "Approved").length,
     declined: filteredData.requests.filter(r => r.status === "Declined").length,
+    canceled: filteredData.requests.filter(r => r.status === "Canceled").length,
   };
+
+  // Calculate stats for various time periods for the "All Time" summary view
+  const summaryStats = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(startOfToday);
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    const dayOfWeek = now.getDay();
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+
+    const calculate = (filterFn) => {
+      const filtered = reports.filter(filterFn);
+      return {
+        filed: filtered.length,
+        resolved: filtered.filter(r => ['done', 'archived'].includes(r.status)).length,
+        declined: filtered.filter(r => r.status === "declined").length,
+        canceled: filtered.filter(r => ['canceled', 'canceled-archived'].includes(r.status)).length,
+      };
+    };
+
+    return {
+      today: calculate(r => r.date >= startOfToday.getTime()),
+      yesterday: calculate(r => r.date >= startOfYesterday.getTime() && r.date < startOfToday.getTime()),
+      thisWeek: calculate(r => r.date >= startOfWeek.getTime()),
+    };
+  }, [reports]);
+
+  const SummaryRow = ({ period, stats }) => (
+    <div className="summary-row">
+      <div className="summary-period">{period}</div>
+      <div className="summary-stat">
+        <span className="summary-value">{stats.filed}</span>
+        <span className="summary-label">Filed</span>
+      </div>
+      <div className="summary-stat">
+        <span className="summary-value">{stats.resolved}</span>
+        <span className="summary-label">Resolved</span>
+      </div>
+      <div className="summary-stat">
+        <span className="summary-value">{stats.declined}</span>
+        <span className="summary-label">Declined</span>
+      </div>
+      <div className="summary-stat">
+        <span className="summary-value">{stats.canceled}</span>
+        <span className="summary-label">Canceled</span>
+      </div>
+    </div>
+  );
 
   const reportData = [
     { name: "Approved", count: reportStats.approved },
     { name: "Declined", count: reportStats.declined },
     { name: "Resolved", count: reportStats.resolved },
     { name: "Pending", count: reportStats.pending },
+    { name: "In Progress", count: reportStats.inProgress },
+    { name: "Canceled", count: reportStats.canceled },
   ];
   const certData = [
     { name: "Approved", count: certStats.approved },
     { name: "Declined", count: certStats.declined },
     { name: "Pending", count: certStats.pending },
+    { name: "Canceled", count: certStats.canceled },
   ];
 
   const recent = (arr) => [...arr].sort((a, b) => b.date - a.date).slice(0, 5);
 
   return (
     <div className="analytics-dashboard">
-      <div className="time-range-selector">
-        <button onClick={() => setTimeRange('daily')} className={timeRange === 'daily' ? 'active' : ''}>Daily</button>
-        <button onClick={() => setTimeRange('weekly')} className={timeRange === 'weekly' ? 'active' : ''}>Weekly</button>
-        <button onClick={() => setTimeRange('monthly')} className={timeRange === 'monthly' ? 'active' : ''}>Monthly</button>
-        <button onClick={() => setTimeRange('all')} className={timeRange === 'all' ? 'active' : ''}>All Time</button>
+      <div className="dashboard-header">
+        <h3>Dashboard</h3>
+        <select className="time-range-selector" value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="this_week">This Week</option>
+            <option value="last_week">Last Week</option>
+            <option value="this_month">This Month</option>
+            <option value="last_month">Last Month</option>
+            <option value="all">All Time</option>
+        </select>
       </div>
 
       <div className="stats-grid">
-        <StatCard icon={<FaFileAlt />} label="Reports Filed" value={reportStats.total} color="#3b82f6" />
-        <StatCard icon={<FaClock />} label="Pending Reports" value={reportStats.pending} color="#f97316" />
-        <StatCard icon={<FaCheckCircle />} label="Approved Reports" value={reportStats.approved} color="#22c55e" />
-        <StatCard icon={<FaTimesCircle />} label="Declined Reports" value={reportStats.declined} color="#ef4444" />
-        <StatCard icon={<FaCheckCircle />} label="Resolved Reports" value={reportStats.resolved} color="#22c55e" />
-        <StatCard icon={<FaTimesCircle />} label="Canceled Reports" value={reportStats.canceled} color="#6b7280" />
-        <StatCard icon={<FaCertificate />} label="Cert. Requests" value={certStats.total} color="#3b82f6" />
+        {timeRange === 'all' ? (
+          <>
+            <StatCard icon={<FaFileAlt />} label="Total Reports Filed" value={reportStats.total} color="#3b82f6" />
+            <StatCard icon={<FaCheckCircle />} label="Resolved Reports" value={reportStats.resolved} color="#22c55e" />
+            <StatCard icon={<FaTimesCircle />} label="Declined Reports" value={reportStats.declined} color="#ef4444" />
+            <StatCard icon={<FaTimesCircle />} label="Canceled Reports" value={reportStats.canceled} color="#6b7280" />
+          </>
+        ) : (
+          <>
+            <StatCard icon={<FaFileAlt />} label="Reports Filed" value={reportStats.total} color="#3b82f6" />
+            <StatCard icon={<FaClock />} label="Pending Reports" value={reportStats.pending} color="#f97316" />
+            <StatCard icon={<FaTools />} label="In Progress" value={reportStats.inProgress} color="#8b5cf6" />
+            <StatCard icon={<FaCheckCircle />} label="Resolved Reports" value={reportStats.resolved} color="#22c55e" />
+            <StatCard icon={<FaTimesCircle />} label="Declined Reports" value={reportStats.declined} color="#ef4444" />
+            <StatCard icon={<FaTimesCircle />} label="Canceled Reports" value={reportStats.canceled} color="#6b7280" />
+          </>
+        )}
+      </div>
+
+        <div className="charts-grid">
+            <ChartCard title="Report Status" data={reportData} />
+        </div>
+      
+      {timeRange === 'all' && (
+        <div className="time-summary-container">
+          <h4>Activity Summary</h4>
+          <SummaryRow period="Today" stats={summaryStats.today} />
+          <SummaryRow period="Yesterday" stats={summaryStats.yesterday} />
+          <SummaryRow period="This Week" stats={summaryStats.thisWeek} />
+        </div>
+      )}
+
+      <div className="stats-grid">
+        <StatCard icon={<FaCertificate />} label="Total Cert. Requests" value={certStats.total} color="#3b82f6" />
         <StatCard icon={<FaClock />} label="Pending Certs" value={certStats.pending} color="#f97316" />
         <StatCard icon={<FaCheckCircle />} label="Approved Certs" value={certStats.approved} color="#22c55e" />
         <StatCard icon={<FaTimesCircle />} label="Declined Certs" value={certStats.declined} color="#ef4444" />
-
-      </div>
-
-      <div className="charts-grid">
-        <ChartCard title="Report Status" data={reportData} />
-        <ChartCard title="Certificate Status" data={certData} />
+        <StatCard icon={<FaTimesCircle />} label="Canceled Certs" value={certStats.canceled} color="#6b7280" />
       </div>
 
       <div className="recent-activity-grid">

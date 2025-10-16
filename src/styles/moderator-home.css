@@ -185,7 +185,7 @@
   flex-direction: column;
   justify-content: flex-start;
   padding-right: 20px;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
   height: 90vh;
   padding: 1.5rem;
   overflow-y: auto;
