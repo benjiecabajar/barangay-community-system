@@ -371,10 +371,20 @@
   right: 0;
   height: calc(100vh - 70px);
   overflow-y: auto;
-  gap: 20px;
+  gap: 10px; /* Reduced gap */
   background: var(--bg-primary); /* optional */
-  padding: 23px;
+  padding: 10px 23px 23px 23px; /* Reduced top padding */
   z-index: 100;
+}
+
+/* --- HIDE SCROLLBAR for right panel --- */
+.right-panel {
+  scrollbar-width: none; /* For Firefox */
+  -ms-overflow-style: none;  /* For Internet Explorer and Edge */
+}
+
+.right-panel::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Opera */
 }
 
 .calendar-box,
@@ -382,6 +392,7 @@
   background: var(--bg-tertiary);
   border-radius: 12px;
   padding: 18px;
+  padding-top: 10px; /* Reduced top padding */
   box-shadow: var(--card-shadow);
 }
 
@@ -403,6 +414,126 @@
   background: var(--brand-primary) !important;
   color: white !important;
   border-radius: 6px;
+}
+
+.events-box .event-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.events-box .event-item-date {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.events-box .event-item {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+  border-left: 4px solid var(--brand-primary);
+}
+
+.events-box .event-item-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.events-box .event-item-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.events-box .event-item-date-display {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-primary);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.events-box .no-events-message {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 20px 0;
+}
+
+.react-calendar__tile .event-dot {
+  height: 6px;
+  width: 6px;
+  background-color: var(--brand-primary);
+  border-radius: 50%;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* --- NEW: Calendar Event Tooltip Styles --- */
+.react-calendar__tile {
+  position: relative; /* This is crucial for the tooltip positioning */
+  overflow: visible; /* Allow the tooltip to show outside the tile's bounds */
+}
+
+.event-tooltip {
+  display: none; /* Hidden by default */
+  position: absolute;
+  bottom: calc(100% - 10px); /* Position above the tile, with a small overlap */
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 20;
+  width: max-content;
+  max-width: 220px;
+  pointer-events: none; /* Prevent tooltip from interfering with clicks */
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.react-calendar__tile:hover .event-tooltip {
+  display: block; /* Show on hover */
+  opacity: 1;
+  transform: translateX(-50%) translateY(-5px); /* Slight upward movement */
+}
+
+.event-tooltip-item {
+  font-size: 13px;
+  text-align: left;
+}
+
+.event-tooltip-item:not(:last-child) {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+/* --- NEW: Calendar Row Hover Effect --- */
+.react-calendar__month-view__days > .react-calendar__tile:hover::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: -1000%;
+  right: -1000%;
+  background: var(--bg-secondary);
+  z-index: -1;
 }
 
 .event-placeholder {

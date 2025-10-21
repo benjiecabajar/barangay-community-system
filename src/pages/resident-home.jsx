@@ -27,6 +27,7 @@ import { ThemeProvider } from "../components/ThemeContext.jsx";
 import ViewReportsModal from "../components/modal-view-reports.jsx";
 import NotificationModal from "../components/modal-notification.jsx"; // Import the new modal
 import RequestCertificationModal from "../components/modal-request-cert.jsx";
+import ViewEventsModal from "../components/view-events-modal.jsx";
 import { logAuditAction } from "../utils/auditLogger.js";
 
 // =========================================================
@@ -103,6 +104,11 @@ function Home() {
   const [submissionStatus, setSubmissionStatus] = useState(null); // 'submitting', 'success', 'error'
   const [notifications, setNotifications] = useState(() => JSON.parse(localStorage.getItem('notifications')) || []);
   const [userReports, setUserReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
+  const [events, setEvents] = useState(() => JSON.parse(localStorage.getItem('calendarEvents')) || []);
+
+  // State for the new event view modal
+  const [isViewEventsModalOpen, setIsViewEventsModalOpen] = useState(false);
+  const [eventsForModal, setEventsForModal] = useState([]);
 
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -116,11 +122,12 @@ function Home() {
       setPosts(JSON.parse(localStorage.getItem("announcements")) || []);
       setUserReports(JSON.parse(localStorage.getItem("userReports")) || []);
       setNotifications(JSON.parse(localStorage.getItem("notifications")) || []);
+      setEvents(JSON.parse(localStorage.getItem('calendarEvents')) || []);
     };
     loadData();
 
     const handleStorageChange = (e) => {
-      if (['announcements', 'userReports', 'notifications'].includes(e.key)) {
+      if (['announcements', 'userReports', 'notifications', 'calendarEvents'].includes(e.key)) {
         loadData();
       }
     };
@@ -136,6 +143,21 @@ function Home() {
   useEffect(() => {
     localStorage.setItem("notifications", JSON.stringify(notifications));
   }, [notifications]);
+
+  // Automatically clean up past events from localStorage on load
+  useEffect(() => {
+      const allEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
+      if (allEvents.length > 0) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Set to the beginning of today
+
+          const upcoming = allEvents.filter(event => new Date(event.date) >= today);
+
+          if (upcoming.length !== allEvents.length) {
+              setEvents(upcoming);
+          }
+      }
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   // --- Comment Handler ---
   const handleAddComment = (postId, commentText) => {
@@ -357,6 +379,74 @@ function Home() {
     );
   };
 
+  const handleDateClick = (clickedDate) => {
+    setDate(clickedDate);
+    const dateString = clickedDate.toISOString().split('T')[0];
+    const dayEvents = events.filter(event => event.date === dateString);
+
+    if (dayEvents.length > 0) {
+      setEventsForModal(dayEvents);
+      setIsViewEventsModalOpen(true);
+    }
+  };
+
+  const handleTileMouseEnter = (date) => {
+    clearTimeout(hoverTimeoutRef.current);
+    const dateString = date.toISOString().split('T')[0];
+    const dayEvents = events.filter(event => event.date === dateString);
+
+    if (dayEvents.length > 0) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setEventsForModal(dayEvents);
+        setHoveredDate(date);
+        setIsViewEventsModalOpen(true);
+      }, 500); // 500ms delay before showing modal
+    }
+  };
+
+  const handleTileMouseLeave = () => {
+    clearTimeout(hoverTimeoutRef.current);
+  };
+
+  const handleModalMouseLeave = () => {
+    // Optional: close modal when mouse leaves it
+    // For better UX, we can leave it open until the user explicitly closes it.
+    // If you want it to close, uncomment the line below.
+    // setIsViewEventsModalOpen(false);
+  };
+
+  // --- Event Logic for Resident View ---
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to the beginning of today
+    return events
+        .filter(event => new Date(event.date) >= today)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [events]);
+
+  const tileContent = ({ date, view }) => {
+      if (view === 'month') {
+          const dateString = date.toISOString().split('T')[0];
+          const dayEvents = events.filter(event => event.date === dateString);
+
+          if (dayEvents.length > 0) {
+              return (
+                  <>
+                      <div className="event-dot"></div>
+                      <div className="event-tooltip">
+                          {dayEvents.map(event => (
+                              <div key={event.id} className="event-tooltip-item">
+                                  <strong>{event.title}</strong>
+                                  {event.description && <p>{event.description}</p>}
+                              </div>
+                          ))}
+                      </div>
+                  </>
+              );
+          }
+      }
+      return null;
+  };
   // This is the same component from modal-view-reports, now rendered here
   const ReportImagePreviewModal = ({ isOpen, onClose, images, startIndex }) => {
     const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -433,6 +523,13 @@ function Home() {
         isOpen={isCertModalOpen}
         onClose={() => setIsCertModalOpen(false)}
         onSubmit={handleCertRequestSubmit}
+      />
+
+      <ViewEventsModal
+        isOpen={isViewEventsModalOpen}
+        onClose={() => setIsViewEventsModalOpen(false)}
+        events={eventsForModal}
+        date={date}
       />
 
       {/* ✅ Using your Header.jsx */}
@@ -531,13 +628,28 @@ function Home() {
         <aside className="right-panel">
           <div className="calendar-box">
             <h4>CALENDAR</h4>
-            <Calendar value={date} onChange={setDate} />
+            <Calendar 
+              value={date} 
+              tileContent={tileContent}
+              onClickDay={handleDateClick}
+            />
           </div>
 
           <div className="events-box">
             <h4>UPCOMING EVENTS</h4>
-            <div className="event-placeholder"></div>
-            <div className="event-placeholder"></div>
+            <div className="events-list">
+              {upcomingEvents.length > 0 ? (
+                upcomingEvents.map(event => (
+                  <div key={event.id} className="event-item" onClick={() => handleDateClick(new Date(event.date))}>
+                    <p className="event-item-title">{event.title}</p>
+                    {event.description && <p className="event-item-desc">{event.description}</p>}
+                    <p className="event-item-date-display">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="no-events-message">No upcoming events scheduled.</p>
+              )}
+            </div>
           </div>
         </aside>
       </div>

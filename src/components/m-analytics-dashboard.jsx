@@ -215,6 +215,7 @@ const AnalyticsDashboard = ({ reports, requests }) => {
           <>
             <StatCard icon={<FaFileAlt />} label="Reports Filed" value={reportStats.total} color="#3b82f6" />
             <StatCard icon={<FaClock />} label="Pending Reports" value={reportStats.pending} color="#f97316" />
+            <StatCard icon={<FaCheckCircle />} label="Approved Reports" value={reportStats.approved} color="#16a34a" />
             <StatCard icon={<FaTools />} label="In Progress" value={reportStats.inProgress} color="#8b5cf6" />
             <StatCard icon={<FaCheckCircle />} label="Resolved Reports" value={reportStats.resolved} color="#22c55e" />
             <StatCard icon={<FaTimesCircle />} label="Declined Reports" value={reportStats.declined} color="#ef4444" />

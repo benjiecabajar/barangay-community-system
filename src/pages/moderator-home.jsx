@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
 import "../styles/moderator-home.css";
 // Import only icons needed in ModeratorHome (sidebar, posts, modals, etc.)
-import { FaUser, FaBullhorn, FaFileAlt, FaHeadset, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell, FaEdit, FaTrash } from "react-icons/fa";
+import { FaUser, FaBullhorn, FaFileAlt, FaChartBar, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell, FaEdit, FaTrash, FaHeadset } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md"; 
 import ReviewCertsModal from "../components/m-review-certs.jsx";
 import AnalyticsDashboard from "../components/m-analytics-dashboard.jsx";
@@ -12,6 +12,7 @@ import "../styles/m-create-post.css";
 import ReviewReportModal from "../components/m-review-report.jsx"; // Import the new modal
 import PostModal from "../components/m-create-post.jsx";
 import NotificationModal from "../components/modal-notification.jsx";
+import EventModal from "../components/m-event-modal.jsx";
 // Import the new Header component
 import Header from "../components/header.jsx"; 
 import ProfileModal from "../components/modal-profile.jsx";
@@ -229,6 +230,12 @@ function ModeratorHome() {
     const [allReports, setAllReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
     const [certificationRequests, setCertificationRequests] = useState(() => JSON.parse(localStorage.getItem('certificationRequests')) || []);
 
+    // Event-related state
+    const [events, setEvents] = useState(() => JSON.parse(localStorage.getItem('calendarEvents')) || []);
+    const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+    const [selectedEventDate, setSelectedEventDate] = useState(new Date());
+    const [currentEvent, setCurrentEvent] = useState({ id: null, title: '', description: '' });
+
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [modalImages, setModalImages] = useState([]);
@@ -242,17 +249,39 @@ function ModeratorHome() {
             setAllReports(JSON.parse(localStorage.getItem("userReports")) || []);
             setModeratorNotifications(JSON.parse(localStorage.getItem("moderatorNotifications")) || []);
             setCertificationRequests(JSON.parse(localStorage.getItem("certificationRequests")) || []);
+            setEvents(JSON.parse(localStorage.getItem("calendarEvents")) || []);
         };
         loadData();
 
         const handleStorageChange = (e) => {
-            if (['announcements', 'userReports', 'moderatorNotifications', 'certificationRequests'].includes(e.key)) {
+            if (['announcements', 'userReports', 'moderatorNotifications', 'certificationRequests', 'calendarEvents'].includes(e.key)) {
                 loadData();
             }
         };
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
+
+    // Save events to localStorage
+    useEffect(() => {
+        localStorage.setItem("calendarEvents", JSON.stringify(events));
+    }, [events]);
+
+    // Automatically clean up past events from localStorage on load
+    useEffect(() => {
+        const allEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
+        if (allEvents.length > 0) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set to the beginning of today
+
+            const upcoming = allEvents.filter(event => new Date(event.date) >= today);
+
+            // If the list changed, update state and localStorage
+            if (upcoming.length !== allEvents.length) {
+                setEvents(upcoming);
+            }
+        }
+    }, []); // Empty dependency array ensures this runs only once on mount
 
     const handlePost = () => {
         // If we are editing, call the update handler instead
@@ -474,6 +503,67 @@ function ModeratorHome() {
         );
     };
 
+    // --- Event Handlers ---
+    const handleSelectDate = (date) => {
+        setDate(date);
+        // For simplicity, we'll just show events for the selected day.
+        // Clicking a date doesn't open the modal directly anymore,
+        // but you could change this behavior if you want.
+    };
+
+    const handleOpenEventModal = (eventToEdit = null) => {
+        if (eventToEdit) {
+            setSelectedEventDate(new Date(eventToEdit.date));
+            setCurrentEvent({ id: eventToEdit.id, title: eventToEdit.title, description: eventToEdit.description });
+        } else {
+            setSelectedEventDate(date); // Use the currently selected calendar date
+            setCurrentEvent({ id: null, title: '', description: '' });
+        }
+        setIsEventModalOpen(true);
+    };
+
+    const handleSaveEvent = () => {
+        const eventToSave = {
+            ...currentEvent,
+            date: selectedEventDate.toISOString().split('T')[0], // Store date as YYYY-MM-DD string
+        };
+
+        if (eventToSave.id) { // Update existing event
+            setEvents(events.map(e => e.id === eventToSave.id ? eventToSave : e));
+            logAuditAction('Updated Event', { eventId: eventToSave.id, title: eventToSave.title }, 'moderator');
+        } else { // Create new event
+            const newEvent = { ...eventToSave, id: Date.now() };
+            setEvents([...events, newEvent]);
+            logAuditAction('Created Event', { eventId: newEvent.id, title: newEvent.title }, 'moderator');
+        }
+        setIsEventModalOpen(false);
+    };
+
+    const handleDeleteEvent = (eventId) => {
+        if (window.confirm("Are you sure you want to delete this event?")) {
+            setEvents(events.filter(e => e.id !== eventId));
+            logAuditAction('Deleted Event', { eventId }, 'moderator');
+            setIsEventModalOpen(false);
+        }
+    };
+
+    const tileContent = ({ date, view }) => {
+        if (view === 'month') {
+            const dateString = date.toISOString().split('T')[0];
+            const hasEvent = events.some(event => event.date === dateString);
+            return hasEvent ? <div className="event-dot"></div> : null;
+        }
+        return null;
+    };
+
+    const upcomingEvents = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to the beginning of today to include today's events
+        return events
+            .filter(event => new Date(event.date) >= today) // Filter for today and future dates
+            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort them chronologically
+    }, [events]);
+
     // --- Image Preview Modal Logic (for existing posts) ---
     const openImageModal = (allImages, index) => {
         setModalImages(allImages);
@@ -633,6 +723,17 @@ function ModeratorHome() {
                 onDelete={handleDeleteNotification}
             />
 
+            <EventModal
+                isOpen={isEventModalOpen}
+                onClose={() => setIsEventModalOpen(false)}
+                selectedDate={selectedEventDate}
+                event={currentEvent}
+                setEventTitle={(title) => setCurrentEvent(prev => ({ ...prev, title }))}
+                setEventDescription={(description) => setCurrentEvent(prev => ({ ...prev, description }))}
+                onSave={handleSaveEvent}
+                onDelete={handleDeleteEvent}
+            />
+
 
             {/* Use the new Header Component */}
             <Header /> 
@@ -741,13 +842,29 @@ function ModeratorHome() {
                 <aside className="right-panel">
                     <div className="calendar-box">
                         <h4>CALENDAR</h4>
-                        <Calendar value={date} onChange={setDate} />
+                        <Calendar 
+                            value={date} 
+                            onChange={handleSelectDate} 
+                            tileContent={tileContent}
+                        />
+                        <button className="m-sidebar-btn blue" style={{height: '40px', marginTop: '15px', width: '100%'}} onClick={() => handleOpenEventModal()}>Add Event for this Date</button>
                     </div>
 
                     <div className="events-box">
                         <h4>UPCOMING EVENTS</h4>
-                        <div className="event-placeholder"></div>
-                        <div className="event-placeholder"></div>
+                        <div className="events-list">
+                            {upcomingEvents.length > 0 ? (
+                                upcomingEvents.map(event => (
+                                    <div key={event.id} className="event-item" onClick={() => handleOpenEventModal(event)}>
+                                        <p className="event-item-title">{event.title}</p>
+                                        <p className="event-item-desc">{event.description}</p>
+                                        <p className="event-item-date-display">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="no-events-message">No upcoming events scheduled.</p>
+                            )}
+                        </div>
                     </div>
                 </aside>
             </div>
