@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
 import "../styles/moderator-home.css";
 // Import only icons needed in ModeratorHome (sidebar, posts, modals, etc.)
-import { FaUser, FaBullhorn, FaFileAlt, FaChartBar, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell, FaEdit, FaTrash, FaHeadset } from "react-icons/fa";
+import { FaUser, FaPlus, FaFileAlt, FaChartBar, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell, FaEdit, FaTrash, FaHeadset, FaSyncAlt, FaCheckCircle } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md"; 
 import ReviewCertsModal from "../components/m-review-certs.jsx";
 import AnalyticsDashboard from "../components/m-analytics-dashboard.jsx";
@@ -234,13 +234,23 @@ function ModeratorHome() {
     const [events, setEvents] = useState(() => JSON.parse(localStorage.getItem('calendarEvents')) || []);
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [selectedEventDate, setSelectedEventDate] = useState(new Date());
-    const [currentEvent, setCurrentEvent] = useState({ id: null, title: '', description: '' });
+    const [currentEvent, setCurrentEvent] = useState({ id: null, title: '', description: '', time: '', endTime: '' });
+    const [eventSubmissionStatus, setEventSubmissionStatus] = useState(null); // 'saving', 'deleting', 'success'
 
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [modalImages, setModalImages] = useState([]);
     const [activeMainTab, setActiveMainTab] = useState('feed'); // 'feed' or 'analytics'
     const newCertsCount = certificationRequests.filter(req => req.status === 'Pending').length;
+
+    // Helper to format time from 'HH:mm' to 'h:mm A'
+    const formatTime = (timeString) => {
+        if (!timeString) return '';
+        const [hours, minutes] = timeString.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    };
 
     // Load data and listen for changes
     useEffect(() => {
@@ -267,21 +277,28 @@ function ModeratorHome() {
         localStorage.setItem("calendarEvents", JSON.stringify(events));
     }, [events]);
 
-    // Automatically clean up past events from localStorage on load
+    // Automatically clean up past events from localStorage on load and every minute
     useEffect(() => {
-        const allEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
-        if (allEvents.length > 0) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set to the beginning of today
+        const cleanupEvents = () => {
+            const allEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
+            if (allEvents.length > 0) {
+                const now = new Date();
+                const upcoming = allEvents.filter(event => {
+                    const eventEndString = event.endTime || event.time || '23:59:59';
+                    const eventEndDateTime = new Date(`${event.date}T${eventEndString}`);
+                    return eventEndDateTime >= now;
+                });
 
-            const upcoming = allEvents.filter(event => new Date(event.date) >= today);
-
-            // If the list changed, update state and localStorage
-            if (upcoming.length !== allEvents.length) {
-                setEvents(upcoming);
+                if (upcoming.length !== allEvents.length) {
+                    setEvents(upcoming);
+                }
             }
-        }
-    }, []); // Empty dependency array ensures this runs only once on mount
+        };
+
+        cleanupEvents(); // Run once on mount
+        const intervalId = setInterval(cleanupEvents, 60000); // Run every 60 seconds
+        return () => clearInterval(intervalId); // Cleanup on unmount
+    }, []); 
 
     const handlePost = () => {
         // If we are editing, call the update handler instead
@@ -426,6 +443,21 @@ function ModeratorHome() {
         };
         const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
         localStorage.setItem('notifications', JSON.stringify([notif, ...currentNotifs]));
+
+        // If approved, send a message to the resident's inbox
+        if (newStatus === 'Approved') {
+            const inboxMessage = {
+                id: Date.now() + 2, // to avoid collision with notif
+                type: 'approved_certificate',
+                certificateType: requestToUpdate.type,
+                requester: requestToUpdate.requester,
+                purpose: requestToUpdate.purpose,
+                dateApproved: Date.now(),
+                isRead: false,
+            };
+            const residentInbox = JSON.parse(localStorage.getItem('residentInbox')) || [];
+            localStorage.setItem('residentInbox', JSON.stringify([inboxMessage, ...residentInbox]));
+        }
     };
 
     const handleDeleteCertRequest = (requestId) => {
@@ -514,42 +546,77 @@ function ModeratorHome() {
     const handleOpenEventModal = (eventToEdit = null) => {
         if (eventToEdit) {
             setSelectedEventDate(new Date(eventToEdit.date));
-            setCurrentEvent({ id: eventToEdit.id, title: eventToEdit.title, description: eventToEdit.description });
+            setCurrentEvent({ id: eventToEdit.id, title: eventToEdit.title, description: eventToEdit.description, time: eventToEdit.time || '', endTime: eventToEdit.endTime || '' });
         } else {
             setSelectedEventDate(date); // Use the currently selected calendar date
-            setCurrentEvent({ id: null, title: '', description: '' });
+            setCurrentEvent({ id: null, title: '', description: '', time: '', endTime: '' });
         }
         setIsEventModalOpen(true);
     };
 
     const handleSaveEvent = () => {
-        const eventToSave = {
-            ...currentEvent,
-            date: selectedEventDate.toISOString().split('T')[0], // Store date as YYYY-MM-DD string
-        };
+        setEventSubmissionStatus('saving');
+        setTimeout(() => {
+            // Timezone-safe date formatting
+            const toYYYYMMDD = (date) => {
+                const d = new Date(date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
 
-        if (eventToSave.id) { // Update existing event
-            setEvents(events.map(e => e.id === eventToSave.id ? eventToSave : e));
-            logAuditAction('Updated Event', { eventId: eventToSave.id, title: eventToSave.title }, 'moderator');
-        } else { // Create new event
-            const newEvent = { ...eventToSave, id: Date.now() };
-            setEvents([...events, newEvent]);
-            logAuditAction('Created Event', { eventId: newEvent.id, title: newEvent.title }, 'moderator');
-        }
-        setIsEventModalOpen(false);
+            const eventToSave = {
+                ...currentEvent,
+                date: toYYYYMMDD(selectedEventDate),
+                time: currentEvent.time,
+                endTime: currentEvent.endTime,
+            };
+
+            if (eventToSave.id) {
+                setEvents(events.map(e => e.id === eventToSave.id ? eventToSave : e));
+                logAuditAction('Updated Event', { eventId: eventToSave.id, title: eventToSave.title, time: eventToSave.time, endTime: eventToSave.endTime }, 'moderator');
+            } else {
+                const newEvent = { ...eventToSave, id: Date.now() };
+                setEvents([...events, newEvent]);
+                logAuditAction('Created Event', { eventId: newEvent.id, title: newEvent.title, time: newEvent.time, endTime: newEvent.endTime }, 'moderator');
+            }
+            setEventSubmissionStatus('success');
+            setTimeout(() => {
+                setIsEventModalOpen(false);
+                setEventSubmissionStatus(null);
+            }, 1500);
+        }, 1000);
     };
 
     const handleDeleteEvent = (eventId) => {
-        if (window.confirm("Are you sure you want to delete this event?")) {
+        setEventSubmissionStatus('deleting');
+        setTimeout(() => {
             setEvents(events.filter(e => e.id !== eventId));
             logAuditAction('Deleted Event', { eventId }, 'moderator');
-            setIsEventModalOpen(false);
-        }
+            setEventSubmissionStatus('success');
+            setTimeout(() => {
+                setIsEventModalOpen(false);
+                setEventSubmissionStatus(null);
+            }, 1500);
+        }, 1000);
+    };
+
+    const handleCloseEventModal = () => {
+        setIsEventModalOpen(false);
+        setEventSubmissionStatus(null);
     };
 
     const tileContent = ({ date, view }) => {
         if (view === 'month') {
-            const dateString = date.toISOString().split('T')[0];
+            // Timezone-safe date formatting
+            const toYYYYMMDD = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            const dateString = toYYYYMMDD(date);
             const hasEvent = events.some(event => event.date === dateString);
             return hasEvent ? <div className="event-dot"></div> : null;
         }
@@ -559,9 +626,14 @@ function ModeratorHome() {
     const upcomingEvents = useMemo(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Set to the beginning of today to include today's events
+        // The `new Date(event.date)` can have timezone issues.
+        // Adding 'T00:00:00' makes it explicit that it's local time midnight.
         return events
-            .filter(event => new Date(event.date) >= today) // Filter for today and future dates
-            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort them chronologically
+            .filter(event => {
+                const eventDate = new Date(`${event.date}T00:00:00`);
+                return eventDate >= today;
+            })
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
     }, [events]);
 
     // --- Image Preview Modal Logic (for existing posts) ---
@@ -725,13 +797,16 @@ function ModeratorHome() {
 
             <EventModal
                 isOpen={isEventModalOpen}
-                onClose={() => setIsEventModalOpen(false)}
+                onClose={handleCloseEventModal}
                 selectedDate={selectedEventDate}
                 event={currentEvent}
                 setEventTitle={(title) => setCurrentEvent(prev => ({ ...prev, title }))}
                 setEventDescription={(description) => setCurrentEvent(prev => ({ ...prev, description }))}
+                setEventTime={(time) => setCurrentEvent(prev => ({ ...prev, time }))}
+                setEventEndTime={(endTime) => setCurrentEvent(prev => ({ ...prev, endTime }))}
                 onSave={handleSaveEvent}
                 onDelete={handleDeleteEvent}
+                submissionStatus={eventSubmissionStatus}
             />
 
 
@@ -759,10 +834,10 @@ function ModeratorHome() {
                         </button>
 
                         <button 
-                            className="m-sidebar-btn blue" 
+                            className="m-sidebar-btn soft-blue" 
                             onClick={() => setIsPostModalOpen(true)}
                         >
-                            <FaBullhorn size={30} />
+                            <FaPlus size={30} />
                             <span>Create Announcement</span>
                         </button>
                         
@@ -847,20 +922,32 @@ function ModeratorHome() {
                             onChange={handleSelectDate} 
                             tileContent={tileContent}
                         />
-                        <button className="m-sidebar-btn blue" style={{height: '40px', marginTop: '15px', width: '100%'}} onClick={() => handleOpenEventModal()}>Add Event for this Date</button>
+                        <button className="add-event-btn" onClick={() => handleOpenEventModal()}>Add Event for this Date</button>
                     </div>
 
                     <div className="events-box">
                         <h4>UPCOMING EVENTS</h4>
                         <div className="events-list">
                             {upcomingEvents.length > 0 ? (
-                                upcomingEvents.map(event => (
-                                    <div key={event.id} className="event-item" onClick={() => handleOpenEventModal(event)}>
-                                        <p className="event-item-title">{event.title}</p>
-                                        <p className="event-item-desc">{event.description}</p>
-                                        <p className="event-item-date-display">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-                                    </div>
-                                ))
+                                upcomingEvents.map(event => {
+                                    const todayString = new Date().toISOString().split('T')[0];
+                                    const isToday = event.date === todayString;
+                                    return (
+                                        <div key={event.id} className={`event-item ${isToday ? 'event-item-today' : ''}`} onClick={() => handleOpenEventModal(event)}>
+                                            <p className="event-item-title">{event.title}</p>
+                                            <p className="event-item-desc">{event.description}</p>
+                                            <p className="event-item-date-display">
+                                                {new Date(event.date.replace(/-/g, '/')).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                                {event.time && (
+                                                <span className="event-item-time">
+                                                    {' at '}
+                                                    {formatTime(event.time)}{event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
+                                                </span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    );
+                                })
                             ) : (
                                 <p className="no-events-message">No upcoming events scheduled.</p>
                             )}

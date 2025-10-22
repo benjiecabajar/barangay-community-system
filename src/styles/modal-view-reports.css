@@ -114,7 +114,8 @@
     border-radius: 0.5rem;
     border: 1px solid var(--border-primary);
     /* --- IMPROVEMENT: Compact vertical padding for more items --- */
-    padding: 1.25rem 1.5rem;
+    padding: 1rem 2rem;
+    margin-left: 2px;
     transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
@@ -372,6 +373,7 @@
     overflow-y: auto;
     flex-grow: 1;
     padding: 0.5rem 10px 0.5rem 0;
+    padding: 0.5rem 10px;
 }
 
 .empty-category-message {

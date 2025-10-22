@@ -13,6 +13,7 @@ import {
   FaClipboardList,
   FaInfoCircle,
   FaBell,
+  FaInbox,
   FaTimes,
   FaChevronLeft,
   FaChevronRight,
@@ -28,6 +29,7 @@ import ViewReportsModal from "../components/modal-view-reports.jsx";
 import NotificationModal from "../components/modal-notification.jsx"; // Import the new modal
 import RequestCertificationModal from "../components/modal-request-cert.jsx";
 import ViewEventsModal from "../components/view-events-modal.jsx";
+import InboxModal from "../components/modal-inbox.jsx";
 import { logAuditAction } from "../utils/auditLogger.js";
 
 // =========================================================
@@ -105,6 +107,8 @@ function Home() {
   const [notifications, setNotifications] = useState(() => JSON.parse(localStorage.getItem('notifications')) || []);
   const [userReports, setUserReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
   const [events, setEvents] = useState(() => JSON.parse(localStorage.getItem('calendarEvents')) || []);
+  const [inboxMessages, setInboxMessages] = useState(() => JSON.parse(localStorage.getItem('residentInbox')) || []);
+  const [isInboxModalOpen, setIsInboxModalOpen] = useState(false);
 
   // State for the new event view modal
   const [isViewEventsModalOpen, setIsViewEventsModalOpen] = useState(false);
@@ -123,11 +127,12 @@ function Home() {
       setUserReports(JSON.parse(localStorage.getItem("userReports")) || []);
       setNotifications(JSON.parse(localStorage.getItem("notifications")) || []);
       setEvents(JSON.parse(localStorage.getItem('calendarEvents')) || []);
+      setInboxMessages(JSON.parse(localStorage.getItem('residentInbox')) || []);
     };
     loadData();
 
     const handleStorageChange = (e) => {
-      if (['announcements', 'userReports', 'notifications', 'calendarEvents'].includes(e.key)) {
+      if (['announcements', 'userReports', 'notifications', 'calendarEvents', 'residentInbox'].includes(e.key)) {
         loadData();
       }
     };
@@ -143,21 +148,33 @@ function Home() {
   useEffect(() => {
     localStorage.setItem("notifications", JSON.stringify(notifications));
   }, [notifications]);
+  useEffect(() => {
+    localStorage.setItem("residentInbox", JSON.stringify(inboxMessages));
+  }, [inboxMessages]);
 
   // Automatically clean up past events from localStorage on load
   useEffect(() => {
-      const allEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
-      if (allEvents.length > 0) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0); // Set to the beginning of today
+        const cleanupEvents = () => {
+            const allEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
+            if (allEvents.length > 0) {
+                const now = new Date();
+                const upcoming = allEvents.filter(event => {
+                    // Use end time, fall back to start time, fall back to end of day
+                    const eventEndString = event.endTime || event.time || '23:59:59';
+                    const eventEndDateTime = new Date(`${event.date}T${eventEndString}`);
+                    return eventEndDateTime >= now;
+                });
 
-          const upcoming = allEvents.filter(event => new Date(event.date) >= today);
+                if (upcoming.length !== allEvents.length) {
+                    setEvents(upcoming);
+                }
+            }
+        };
 
-          if (upcoming.length !== allEvents.length) {
-              setEvents(upcoming);
-          }
-      }
-  }, []); // Empty dependency array ensures this runs only once on mount
+        cleanupEvents(); // Run once on mount
+        const intervalId = setInterval(cleanupEvents, 60000); // Run every 60 seconds
+        return () => clearInterval(intervalId); // Cleanup on unmount
+    }, []); 
 
   // --- Comment Handler ---
   const handleAddComment = (postId, commentText) => {
@@ -264,23 +281,34 @@ function Home() {
   };
 
   const handleCertRequestSubmit = (requestData) => {
-    const newRequest = {
-      id: Date.now(),
-      date: Date.now(),
-      status: "Pending",
-      type: requestData.type,
-      purpose: requestData.purpose,
-      requester: "Benjie Cabajar", // Placeholder for logged-in user
-    };
+    setSubmissionStatus('submitting');
+    setTimeout(() => {
+      const newRequest = {
+        id: Date.now(),
+        date: Date.now(),
+        status: "Pending",
+        type: requestData.type,
+        purpose: requestData.purpose,
+        requester: "Benjie Cabajar", // Placeholder for logged-in user
+      };
 
-    const currentRequests = JSON.parse(localStorage.getItem('certificationRequests')) || [];
-    localStorage.setItem('certificationRequests', JSON.stringify([newRequest, ...currentRequests]));
+      const currentRequests = JSON.parse(localStorage.getItem('certificationRequests')) || [];
+      localStorage.setItem('certificationRequests', JSON.stringify([newRequest, ...currentRequests]));
 
-    // Also create a notification for the moderator
-    const modNotif = { id: Date.now() + 2, type: 'new_cert_request', message: `A new "${newRequest.type}" has been requested.`, requestId: newRequest.id, isRead: false, date: Date.now() };
-    const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
-    localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
-    alert('Your request has been submitted!');
+      // Also create a notification for the moderator
+      const modNotif = { id: Date.now() + 2, type: 'new_cert_request', message: `A new "${newRequest.type}" has been requested.`, requestId: newRequest.id, isRead: false, date: Date.now() };
+      const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
+      localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
+
+      logAuditAction('Submitted Certificate Request', { type: newRequest.type }, 'resident');
+      setSubmissionStatus('success');
+
+      setTimeout(() => {
+        setIsCertModalOpen(false);
+        setSubmissionStatus(null);
+      }, 1500);
+
+    }, 2000);
   };
 
   const handleOpenViewReports = () => {
@@ -312,6 +340,21 @@ function Home() {
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
     }
   };
+
+  const handleMarkAsRead = (messageId) => {
+    const updatedMessages = inboxMessages.map(msg => 
+      msg.id === messageId ? { ...msg, isRead: true } : msg
+    );
+    setInboxMessages(updatedMessages);
+  };
+
+  const handleDeleteMessage = (messageId) => {
+    if (window.confirm("Are you sure you want to delete this message?")) {
+      const updatedMessages = inboxMessages.filter(msg => msg.id !== messageId);
+      setInboxMessages(updatedMessages);
+    }
+  };
+
 
   const handleLogout = () => {
     console.log("Logging out...");
@@ -415,18 +458,39 @@ function Home() {
     // setIsViewEventsModalOpen(false);
   };
 
+  // Helper to format time from 'HH:mm' to 'h:mm A'
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+
   // --- Event Logic for Resident View ---
   const upcomingEvents = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to the beginning of today
+    // The `new Date(event.date)` can have timezone issues.
+    // Adding 'T00:00:00' makes it explicit that it's local time midnight.
     return events
-        .filter(event => new Date(event.date) >= today)
+        .filter(event => {
+            const eventDate = new Date(`${event.date}T00:00:00`);
+            return eventDate >= today;
+        })
         .sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [events]);
 
   const tileContent = ({ date, view }) => {
       if (view === 'month') {
-          const dateString = date.toISOString().split('T')[0];
+          // Timezone-safe date formatting
+          const toYYYYMMDD = (d) => {
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+          };
+          const dateString = toYYYYMMDD(date);
           const dayEvents = events.filter(event => event.date === dateString);
 
           if (dayEvents.length > 0) {
@@ -523,6 +587,7 @@ function Home() {
         isOpen={isCertModalOpen}
         onClose={() => setIsCertModalOpen(false)}
         onSubmit={handleCertRequestSubmit}
+        submissionStatus={submissionStatus}
       />
 
       <ViewEventsModal
@@ -531,6 +596,15 @@ function Home() {
         events={eventsForModal}
         date={date}
       />
+
+      <InboxModal
+        isOpen={isInboxModalOpen}
+        onClose={() => setIsInboxModalOpen(false)}
+        messages={inboxMessages}
+        onMarkAsRead={handleMarkAsRead}
+        onDelete={handleDeleteMessage}
+      />
+
 
       {/* ✅ Using your Header.jsx */}
       <Header/>
@@ -549,6 +623,14 @@ function Home() {
               <span>Notifications</span>
               {notifications.filter(n => !n.isRead).length > 0 && (
                 <span className="notification-badge">{notifications.filter(n => !n.isRead).length}</span>
+              )}
+            </button>
+
+            <button className="sidebar-btn green notification-bell-btn" onClick={() => setIsInboxModalOpen(true)}>
+              <FaInbox size={30} />
+              <span>Inbox</span>
+              {inboxMessages.filter(m => !m.isRead).length > 0 && (
+                <span className="notification-badge">{inboxMessages.filter(m => !m.isRead).length}</span>
               )}
             </button>
 
@@ -639,13 +721,25 @@ function Home() {
             <h4>UPCOMING EVENTS</h4>
             <div className="events-list">
               {upcomingEvents.length > 0 ? (
-                upcomingEvents.map(event => (
-                  <div key={event.id} className="event-item" onClick={() => handleDateClick(new Date(event.date))}>
-                    <p className="event-item-title">{event.title}</p>
-                    {event.description && <p className="event-item-desc">{event.description}</p>}
-                    <p className="event-item-date-display">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-                  </div>
-                ))
+                upcomingEvents.map(event => {
+                  const todayString = new Date().toISOString().split('T')[0];
+                  const isToday = event.date === todayString;
+                  return (
+                    <div key={event.id} className={`event-item ${isToday ? 'event-item-today' : ''}`} onClick={() => handleDateClick(new Date(event.date))}>
+                      <p className="event-item-title">{event.title}</p>
+                      {event.description && <p className="event-item-desc">{event.description}</p>}
+                      <p className="event-item-date-display">
+                        {new Date(event.date.replace(/-/g, '/')).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                        {event.time && (
+                          <span className="event-item-time">
+                            {' at '}
+                            {formatTime(event.time)}{event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  );
+                })
               ) : (
                 <p className="no-events-message">No upcoming events scheduled.</p>
               )}

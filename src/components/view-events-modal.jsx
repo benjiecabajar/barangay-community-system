@@ -5,6 +5,14 @@ import "../styles/view-events-modal.css";
 const ViewEventsModal = ({ isOpen, onClose, events, date }) => {
   if (!isOpen) return null;
 
+  // Helper to format time from 'HH:mm' to 'h:mm A'
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const d = new Date(0, 0, 0, hours, minutes);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+
   return (
     <div className="view-events-modal-overlay" onClick={onClose}>
       <div
@@ -29,7 +37,14 @@ const ViewEventsModal = ({ isOpen, onClose, events, date }) => {
           {events.length > 0 ? (
             events.map((event) => (
               <div key={event.id} className="event-modal-item">
-                <h4 className="event-modal-title">{event.title}</h4>
+                <div className="event-modal-title-container">
+                  <h4 className="event-modal-title">{event.title}</h4>
+                  {event.time && (
+                    <span className="event-modal-time">
+                      {formatTime(event.time)}{event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
+                    </span>
+                  )}
+                </div>
                 {event.description && (
                   <p className="event-modal-desc">{event.description}</p>
                 )}

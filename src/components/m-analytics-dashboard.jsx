@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  FaFileAlt, FaCertificate, FaClock, FaCheckCircle, FaTimesCircle, FaTools
+  FaFileAlt, FaCertificate, FaClock, FaCheckCircle, FaTimesCircle, FaTools, FaEye, FaEyeSlash
 } from "react-icons/fa";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
@@ -41,12 +41,12 @@ const ChartCard = ({ title, data }) => {
     <div className="chart-container">
       <h4>{title}</h4>
       <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#ddd" />
-          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={70} />
+        <BarChart data={data} layout="horizontal" margin={{ top: 5, right: 20, left: 0, bottom: 40 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
+          <XAxis type="category" dataKey="name" tick={{ fontSize: 11 }} angle={-35} textAnchor="end" interval={0} />
+          <YAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
           <Tooltip />
-          <Bar dataKey="count" barSize={20}>
+          <Bar dataKey="count" barSize={25}>
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={getColor(entry.name)} />
             ))}
@@ -59,6 +59,7 @@ const ChartCard = ({ title, data }) => {
 
 const AnalyticsDashboard = ({ reports, requests }) => {
   const [timeRange, setTimeRange] = useState('all'); // 'today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'all'
+  const [showStats, setShowStats] = useState(true);
 
   const filteredData = useMemo(() => {
     const now = new Date();
@@ -132,7 +133,7 @@ const AnalyticsDashboard = ({ reports, requests }) => {
     const startOfWeek = new Date(startOfToday);
     startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
 
-    const calculate = (filterFn) => {
+    const calculateReports = (filterFn) => {
       const filtered = reports.filter(filterFn);
       return {
         filed: filtered.length,
@@ -142,10 +143,27 @@ const AnalyticsDashboard = ({ reports, requests }) => {
       };
     };
 
+    const calculateCerts = (filterFn) => {
+        const filtered = requests.filter(filterFn);
+        return {
+            requested: filtered.length,
+            approved: filtered.filter(r => r.status === "Approved").length,
+            declined: filtered.filter(r => r.status === "Declined").length,
+            canceled: filtered.filter(r => r.status === "Canceled").length,
+        };
+    };
+
     return {
-      today: calculate(r => r.date >= startOfToday.getTime()),
-      yesterday: calculate(r => r.date >= startOfYesterday.getTime() && r.date < startOfToday.getTime()),
-      thisWeek: calculate(r => r.date >= startOfWeek.getTime()),
+      reports: {
+        today: calculateReports(r => r.date >= startOfToday.getTime()),
+        yesterday: calculateReports(r => r.date >= startOfYesterday.getTime() && r.date < startOfToday.getTime()),
+        thisWeek: calculateReports(r => r.date >= startOfWeek.getTime()),
+      },
+      certs: {
+        today: calculateCerts(r => r.date >= startOfToday.getTime()),
+        yesterday: calculateCerts(r => r.date >= startOfYesterday.getTime() && r.date < startOfToday.getTime()),
+        thisWeek: calculateCerts(r => r.date >= startOfWeek.getTime()),
+      }
     };
   }, [reports]);
 
@@ -192,15 +210,23 @@ const AnalyticsDashboard = ({ reports, requests }) => {
     <div className="analytics-dashboard">
       <div className="dashboard-header">
         <h3>Dashboard</h3>
-        <select className="time-range-selector" value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="this_week">This Week</option>
-            <option value="last_week">Last Week</option>
-            <option value="this_month">This Month</option>
-            <option value="last_month">Last Month</option>
-            <option value="all">All Time</option>
-        </select>
+        <div className="dashboard-controls">
+          <button className="toggle-stats-btn" onClick={() => setShowStats(!showStats)}>
+            {showStats ? <FaEyeSlash /> : <FaEye />}
+            <span>
+              {showStats ? 'Hide Stats' : 'Show Stats'}
+            </span>
+          </button>
+          <select className="time-range-selector" value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="last_week">Last Week</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="all">All Time</option>
+          </select>
+        </div>
       </div>
 
       <div className="stats-grid">
@@ -224,26 +250,71 @@ const AnalyticsDashboard = ({ reports, requests }) => {
         )}
       </div>
 
-        <div className="charts-grid">
-            <ChartCard title="Report Status" data={reportData} />
+      <div className={`stats-container ${!showStats ? 'hidden' : ''}`}>
+        <div className="charts-grid" style={{ overflow: 'hidden' }}>
+          <ChartCard title="Report Status" data={reportData} />
         </div>
+      </div>
       
+      <div className="stats-grid">
+        {timeRange === 'all' ? (
+          <>
+            <StatCard icon={<FaCertificate />} label="Total Cert. Requests" value={certStats.total} color="#3b82f6" />
+            <StatCard icon={<FaCheckCircle />} label="Approved Certs" value={certStats.approved} color="#22c55e" />
+            <StatCard icon={<FaTimesCircle />} label="Declined Certs" value={certStats.declined} color="#ef4444" />
+            <StatCard icon={<FaTimesCircle />} label="Canceled Certs" value={certStats.canceled} color="#6b7280" />
+          </>
+        ) : (
+          <>
+            <StatCard icon={<FaCertificate />} label="Total Cert. Requests" value={certStats.total} color="#3b82f6" />
+            <StatCard icon={<FaClock />} label="Pending Certs" value={certStats.pending} color="#f97316" />
+            <StatCard icon={<FaCheckCircle />} label="Approved Certs" value={certStats.approved} color="#22c55e" />
+            <StatCard icon={<FaTimesCircle />} label="Declined Certs" value={certStats.declined} color="#ef4444" />
+            <StatCard icon={<FaTimesCircle />} label="Canceled Certs" value={certStats.canceled} color="#6b7280" />
+          </>
+        )}
+      </div>
+
+      <div className={`stats-container ${!showStats ? 'hidden' : ''}`}>
+        <div className="charts-grid" style={{ overflow: 'hidden' }}>
+          <ChartCard title="Certificate Request Status" data={certData} />
+        </div>
+      </div>
+
       {timeRange === 'all' && (
-        <div className="time-summary-container">
-          <h4>Activity Summary</h4>
-          <SummaryRow period="Today" stats={summaryStats.today} />
-          <SummaryRow period="Yesterday" stats={summaryStats.yesterday} />
-          <SummaryRow period="This Week" stats={summaryStats.thisWeek} />
+        <div className="charts-grid">
+          <div className="time-summary-container">
+            <h4>Reports Summary</h4>
+            <SummaryRow period="Today" stats={summaryStats.reports.today} />
+            <SummaryRow period="Yesterday" stats={summaryStats.reports.yesterday} />
+            <SummaryRow period="This Week" stats={summaryStats.reports.thisWeek} />
+          </div>
+          <div className="time-summary-container">
+            <h4>Certificates Summary</h4>
+            <div className="summary-row">
+                <div className="summary-period">Today</div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.today.requested}</span><span className="summary-label">Requested</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.today.approved}</span><span className="summary-label">Approved</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.today.declined}</span><span className="summary-label">Declined</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.today.canceled}</span><span className="summary-label">Canceled</span></div>
+            </div>
+            <div className="summary-row">
+                <div className="summary-period">Yesterday</div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.yesterday.requested}</span><span className="summary-label">Requested</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.yesterday.approved}</span><span className="summary-label">Approved</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.yesterday.declined}</span><span className="summary-label">Declined</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.yesterday.canceled}</span><span className="summary-label">Canceled</span></div>
+            </div>
+            <div className="summary-row">
+                <div className="summary-period">This Week</div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.thisWeek.requested}</span><span className="summary-label">Requested</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.thisWeek.approved}</span><span className="summary-label">Approved</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.thisWeek.declined}</span><span className="summary-label">Declined</span></div>
+                <div className="summary-stat"><span className="summary-value">{summaryStats.certs.thisWeek.canceled}</span><span className="summary-label">Canceled</span></div>
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="stats-grid">
-        <StatCard icon={<FaCertificate />} label="Total Cert. Requests" value={certStats.total} color="#3b82f6" />
-        <StatCard icon={<FaClock />} label="Pending Certs" value={certStats.pending} color="#f97316" />
-        <StatCard icon={<FaCheckCircle />} label="Approved Certs" value={certStats.approved} color="#22c55e" />
-        <StatCard icon={<FaTimesCircle />} label="Declined Certs" value={certStats.declined} color="#ef4444" />
-        <StatCard icon={<FaTimesCircle />} label="Canceled Certs" value={certStats.canceled} color="#6b7280" />
-      </div>
 
       <div className="recent-activity-grid">
         {[

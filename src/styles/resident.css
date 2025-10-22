@@ -371,7 +371,7 @@
   right: 0;
   height: calc(100vh - 70px);
   overflow-y: auto;
-  gap: 10px; /* Reduced gap */
+  gap: 15px;
   background: var(--bg-primary); /* optional */
   padding: 10px 23px 23px 23px; /* Reduced top padding */
   z-index: 100;
@@ -392,17 +392,10 @@
   background: var(--bg-tertiary);
   border-radius: 12px;
   padding: 18px;
-  padding-top: 10px; /* Reduced top padding */
+  padding-top: 2px; /* Reduced top padding */
   box-shadow: var(--card-shadow);
 }
 
-.calendar-box h4,
-.events-box h4 {
-  margin-bottom: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
 
 .react-calendar {
   width: 100%;
@@ -416,12 +409,7 @@
   border-radius: 6px;
 }
 
-.events-box .event-item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-}
+
 
 .events-box .event-item-date {
   font-size: 12px;
@@ -430,11 +418,7 @@
   flex-shrink: 0;
 }
 
-.events-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+
 
 .events-box .event-item {
   background: var(--bg-secondary);
@@ -442,6 +426,13 @@
   cursor: pointer;
   border-left: 4px solid var(--brand-primary);
 }
+
+.events-box .event-item-today {
+  border-left-color: #f97316; /* Orange color for today's events */
+  background: linear-gradient(to right, var(--bg-secondary), var(--bg-tertiary));
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.1);
+}
+
 
 .events-box .event-item-title {
   font-weight: 600;

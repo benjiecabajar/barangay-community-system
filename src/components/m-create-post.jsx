@@ -40,7 +40,7 @@ const PostModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h2>{editingPost ? "Edit Announcement" : "Create New Announcement"}</h2>
+          <h2>{editingPost ? "Edit Announcement" : "Create new Announcement"}</h2>
           <button className="close-btn" onClick={handleClose}>
             <FaTimes size={20} />
           </button>

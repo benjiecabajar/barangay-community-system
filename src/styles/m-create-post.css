@@ -163,3 +163,15 @@
     width: 50%;
     box-shadow: none;
 }
+
+/* --- NEW: Image Preview Container --- */
+.image-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-height: 250px; /* Limit the height of the preview area */
+    overflow-y: auto;  /* Allow scrolling if content exceeds max-height */
+    padding: 5px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaTimes, FaCamera, FaUpload } from 'react-icons/fa';
+import { FaTimes, FaCamera, FaUpload, FaSyncAlt, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import '../styles/modal-request-cert.css';
 
 const CERTIFICATE_TYPES = [
@@ -10,7 +10,7 @@ const CERTIFICATE_TYPES = [
   'Certificate of Good Moral Character',
 ];
 
-const RequestCertificationModal = ({ isOpen, onClose, onSubmit }) => {
+const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus }) => {
   const [idImages, setIdImages] = useState({ front: null, back: null });
   const [residencyFiles, setResidencyFiles] = useState({ govIdFront: null, govIdBack: null, utilityBill: null });
   const [indigencyFiles, setIndigencyFiles] = useState({ front: null, back: null });
@@ -250,7 +250,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit }) => {
       return;
     }
 
-    let submissionData = {
+    const submissionData = {
       type: certType,
       purpose: purpose,
       idImages: idImages,
@@ -262,31 +262,6 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit }) => {
     };
 
     onSubmit(submissionData);
-    setPurpose('');
-    setIdImages({ front: null, back: null });
-    setResidencyFiles({ govIdFront: null, govIdBack: null, utilityBill: null });
-    setIndigencyFiles({ front: null, back: null });
-    setGoodMoralFiles({ govId: null, proofOfResidency: null, communityTaxCert: null });
-    setIdPreviews({ front: null, back: null });
-    setResidencyPreviews({ govIdFront: null, govIdBack: null, utilityBill: null });
-    setIndigencyPreviews({ front: null, back: null });
-    setGoodMoralPreviews({ govId: null, proofOfResidency: null, communityTaxCert: null });
-    setClearanceForm({
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      address: '',
-      dob: '',
-      civilStatus: '',
-    });
-    setResidencyForm({
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      address: '',
-      lengthOfResidency: '',
-    });
-    onClose();
   };
 
   const handleClose = () => {
@@ -345,6 +320,32 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <div className="cert-modal-overlay" onClick={handleClose}>
       <div className="cert-modal-content" onClick={(e) => e.stopPropagation()}>
+        {submissionStatus && (
+          <div className="submission-overlay">
+            {submissionStatus === 'submitting' && (
+              <>
+                <div className="spinner"></div>
+                <p>Submitting your request...</p>
+              </>
+            )}
+            {submissionStatus === 'success' && (
+              <>
+                <FaCheckCircle className="success-icon" size={60} />
+                <p>Request Submitted Successfully!</p>
+              </>
+            )}
+            {submissionStatus === 'error' && (
+              <>
+                <FaExclamationCircle className="error-icon" size={60} />
+                <p>Something went wrong. Please try again.</p>
+                <button type="button" className="submit-cert-btn" onClick={handleSubmit}>
+                  Try Again
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Camera View */}
         {isCameraActive && (
           <div className="camera-view-cert">
@@ -356,12 +357,12 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit }) => {
               <button 
                 type="button" 
                 className="capture-btn" 
-                onClick={cameraFor?.formType === 'clearance' ? takePictureForID : takePicture}
+                onClick={takePicture}
               >
                 <FaCamera size={24} />
               </button>
             </div>
-            <div className="camera-overlay-text">Capturing {cameraFor?.fileKey} for {cameraFor?.formType}</div>
+            <div className="camera-overlay-text">Capturing {cameraFor?.fileKey} of ID</div>
           </div>
         )}
 
@@ -461,7 +462,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit }) => {
                         <FaUpload size={16} /> Upload
                         <input type="file" id="back-id-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'back', 'clearance')} style={{ display: 'none' }} />
                       </label>
-                      <button type="button" className="evidence-btn" onClick={() => startCamera('front', 'clearance')} >
+                      <button type="button" className="evidence-btn" onClick={() => startCamera('back', 'clearance')} >
                         <FaCamera size={16} /> Take Picture
                       </button>
                     </div>

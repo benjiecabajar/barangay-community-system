@@ -39,7 +39,7 @@ const REPORT_FILTER_TYPES = [
 
 const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onDeleteReport }) => {
   const [selectedReport, setSelectedReport] = useState(null);
-  const [activeTab, setActiveTab] = useState('Pending');
+  const [activeTab, setActiveTab] = useState('New');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
 
@@ -92,6 +92,7 @@ const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onD
   });
 
   // --- Categorization Logic (uses filtered reports) ---
+  const newReports = filteredReports.filter(r => r.status === 'submitted').sort((a, b) => b.date - a.date);
   const pendingReports = filteredReports.filter(r => ['submitted', 'reviewed'].includes(r.status)).sort((a, b) => b.date - a.date);
   const approvedReports = filteredReports.filter(r => r.status === 'approved').sort((a, b) => b.date - a.date);
   const inProgressReports = filteredReports.filter(r => r.status === 'in-progress').sort((a, b) => b.date - a.date);
@@ -142,6 +143,9 @@ const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onD
                 </select>
               </div>
               <div className="certs-tabs">
+                <button className={`tab-btn ${activeTab === 'New' ? 'active' : ''}`} onClick={() => setActiveTab('New')}>
+                  New ({newReports.length})
+                </button>
                 <button className={`tab-btn ${activeTab === 'Pending' ? 'active' : ''}`} onClick={() => setActiveTab('Pending')}>
                   Pending ({pendingReports.length})
                 </button>
@@ -159,6 +163,7 @@ const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onD
                 </button>
               </div>
               <div className="certs-tab-content">
+                {activeTab === 'New' && renderReportList(newReports, "No new reports.")}
                 {activeTab === 'Pending' && renderReportList(pendingReports, "No pending reports.")}
                 {activeTab === 'Approved' && renderReportList(approvedReports, "No approved reports.")}
                 {activeTab === 'In Progress' && renderReportList(inProgressReports, "No active reports.")}

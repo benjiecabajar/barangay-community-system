@@ -1,5 +1,5 @@
-import React from "react";
-import { FaTimes, FaTrash } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaTimes, FaTrash, FaSyncAlt, FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
 
 const EventModal = ({
   isOpen,
@@ -8,16 +8,30 @@ const EventModal = ({
   event,
   setEventTitle,
   setEventDescription,
+  setEventTime,
+  setEventEndTime,
   onSave,
   onDelete,
+  submissionStatus,
 }) => {
   if (!isOpen) return null;
 
   const isEditing = event && event.id;
+  const [timeError, setTimeError] = useState('');
+
+  useEffect(() => {
+    if (event.time && event.endTime && event.endTime <= event.time) {
+      setTimeError('End time must be after start time.');
+    } else {
+      setTimeError('');
+    }
+  }, [event.time, event.endTime]);
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (event.title.trim()) {
+    if (timeError) return; // Prevent submission if there's a time error
+
+    if (event.title.trim() && !timeError) {
       onSave();
     }
   };
@@ -28,6 +42,30 @@ const EventModal = ({
         className="event-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
+        {submissionStatus && (
+          <div className="submission-overlay">
+            {submissionStatus === 'saving' && (
+              <>
+                <div className="spinner"></div>
+                <p>Saving Event...</p>
+              </>
+            )}
+            {submissionStatus === 'deleting' && (
+              <>
+                <div className="spinner"></div>
+                <p>Deleting Event...</p>
+              </>
+            )}
+            {submissionStatus === 'success' && (
+              <>
+                <FaCheckCircle className="success-icon" size={60} />
+                <p>Action Successful!</p>
+              </>
+            )}
+          </div>
+        )}
+
+
         <div className="modal-header">
           <h2>{isEditing ? "Edit Event" : "Add Event"}</h2>
           <button className="close-btn" onClick={onClose}>
@@ -62,12 +100,44 @@ const EventModal = ({
             ></textarea>
           </div>
 
+          <div className="time-inputs-container">
+            <div className="form-group">
+              <label htmlFor="event-time">{event.endTime ? "Start Time" : "Time (Optional)"}</label>
+              <input
+                id="event-time"
+                type="time"
+                value={event.time || ''}
+                onChange={(e) => setEventTime(e.target.value)}
+                required={!!event.endTime}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="event-end-time">End Time (Optional)</label>
+              <input
+                id="event-end-time"
+                type="time"
+                value={event.endTime || ''}
+                onChange={(e) => setEventEndTime(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {timeError && (
+            <div className="time-error-message">
+              <FaExclamationCircle />
+              <span>{timeError}</span>
+            </div>
+          )}
+
+
+
           <div className="modal-footer">
             {isEditing && (
               <button
                 type="button"
                 className="delete-event-btn"
-                onClick={() => onDelete(event.id)}
+                onClick={() => { if (window.confirm("Are you sure you want to delete this event?")) { onDelete(event.id); } }}
               >
                 <FaTrash /> Delete
               </button>
@@ -75,7 +145,7 @@ const EventModal = ({
             <button
               type="submit"
               className="save-event-btn"
-              disabled={!event.title.trim()}
+              disabled={!event.title.trim() || !!timeError}
             >
               {isEditing ? "Save Changes" : "Save Event"}
             </button>
