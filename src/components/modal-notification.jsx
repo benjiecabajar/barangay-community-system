@@ -7,14 +7,14 @@ const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete }
 
   const getNotificationIcon = (type) => {
     switch (type) {
-      case "report_update":
-        return <FaClipboardCheck className="icon report" />;
-      case "new_announcement":
-        return <FaBullhorn className="icon announcement" />;
-      case "new_report":
-        return <FaFileAlt className="icon new-report" />;
-      default:
-        return <FaBell className="icon default" />;
+        case 'new_report': // Moderator
+            return <FaFileAlt className="icon new-report" />; // Orange
+        case 'report_update':
+            return <FaClipboardCheck className="icon report" />;
+        case 'new_announcement':
+            return <FaBullhorn className="icon announcement" />;
+        default:
+            return <FaBell className="icon default" />;
     }
   };
 
@@ -48,11 +48,13 @@ const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete }
                   <div className="notification-details">
                     <p className="message">{notif.message}</p>
                     <small className="date">
-                      {new Date(notif.date).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                      {new Date(notif.date).toLocaleString([], {
+                        dateStyle: "short", timeStyle: "short" 
+                      })}
                     </small>
                   </div>
-                  <button className="delete-notif-btn" onClick={() => onDelete(notif.id)} title="Delete notification">
-                    <FaTimes />
+                  <button className="notification-delete-btn" onClick={() => onDelete(notif.id)} title="Delete notification">
+                    <FaTimes size={12} />
                   </button>
                 </div>
               ))}

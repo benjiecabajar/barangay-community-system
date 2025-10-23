@@ -11,7 +11,7 @@ const EventModal = ({
   setEventTime,
   setEventEndTime,
   onSave,
-  onDelete,
+  onEnd,
   submissionStatus,
 }) => {
   if (!isOpen) return null;
@@ -102,23 +102,24 @@ const EventModal = ({
 
           <div className="time-inputs-container">
             <div className="form-group">
-              <label htmlFor="event-time">{event.endTime ? "Start Time" : "Time (Optional)"}</label>
+              <label htmlFor="event-time">Start Time</label>
               <input
                 id="event-time"
                 type="time"
                 value={event.time || ''}
                 onChange={(e) => setEventTime(e.target.value)}
-                required={!!event.endTime}
+                required
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="event-end-time">End Time (Optional)</label>
+              <label htmlFor="event-end-time">End Time</label>
               <input
                 id="event-end-time"
                 type="time"
                 value={event.endTime || ''}
                 onChange={(e) => setEventEndTime(e.target.value)}
+                required
               />
             </div>
           </div>
@@ -137,9 +138,9 @@ const EventModal = ({
               <button
                 type="button"
                 className="delete-event-btn"
-                onClick={() => { if (window.confirm("Are you sure you want to delete this event?")) { onDelete(event.id); } }}
+                onClick={() => { if (window.confirm("Are you sure you want to end this event? This will remove it from the calendar and notify residents.")) { onEnd(event.id); } }}
               >
-                <FaTrash /> Delete
+                <FaCheckCircle /> End Event
               </button>
             )}
             <button

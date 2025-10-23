@@ -25,7 +25,6 @@
 
 .support-modal-content .modal-header {
     display: flex;
-    
     justify-content: space-between;
     align-items: center;
     padding-bottom: 15px;
@@ -36,9 +35,8 @@
 .support-modal-content .modal-header h2 {
     font-size: 1.3rem;
     font-weight: 700;
-    margin-top: 10px;
-    margin-bottom: 10px;
     color: var(--brand-primary);
+    margin: 0;
 }
 
 .support-modal-content .close-btn {
@@ -48,8 +46,6 @@
     border-radius: 50%;
     width: 32px;
     height: 32px;
-    margin-right: 410px;
-    margin-top:30px;
     cursor: pointer;
     display: flex;
     justify-content: center;

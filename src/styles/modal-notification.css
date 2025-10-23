@@ -18,14 +18,47 @@
     background: var(--bg-primary);
     border-radius: 16px;
     padding: 20px 24px;
-    width: 500px;
+    width: 700px;
+    height: 1000px;
     margin-top: 50px;
-    max-width: 90vw;
-    max-height: 85vh;
+    max-width: 100vw;
+    max-height: 80vh;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
     animation: slideUpModal 0.4s ease forwards;
+    position: relative; /* Needed for the submission overlay */
+    overflow: hidden; /* Hide spinner overflow */
+}
+
+/* --- Submission Overlay (for loading states) --- */
+.notification-modal-content .submission-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .notification-modal-content .submission-overlay {
+    background: rgba(24, 24, 27, 0.8);
+}
+
+.notification-modal-content .submission-overlay .spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--brand-primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
 }
 
 .notification-modal-content .modal-header {
@@ -113,8 +146,6 @@
 
 .notification-content {
     flex-grow: 1; /* Allow content to take up available space */
-    display: flex;
-    gap: 15px;
 }
 .notification-details .message {
     margin: 0;
@@ -144,7 +175,7 @@
     opacity: 0;
     transition: opacity 0.2s, background-color 0.2s, color 0.2s;
     /* Keep it in the flex flow but align to the right */
-    margin-left: auto;
+    margin-left: 15px; /* Add space between text and button */
 }
 
 .notification-item:hover .notification-delete-btn {

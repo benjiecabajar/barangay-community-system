@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Calendar from "react-calendar"; 
 import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
 import "../styles/moderator-home.css";
 // Import only icons needed in ModeratorHome (sidebar, posts, modals, etc.)
-import { FaUser, FaPlus, FaFileAlt, FaChartBar, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell, FaEdit, FaTrash, FaHeadset, FaSyncAlt, FaCheckCircle } from "react-icons/fa";
+import { FaUser, FaPlus, FaFileAlt, FaChartBar, FaInfoCircle, FaCog, FaTimes, FaChevronLeft, FaChevronRight, FaEllipsisH, FaBell, FaEdit, FaTrash, FaHeadset, FaSyncAlt, FaCheckCircle, FaInbox, FaExclamationTriangle } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md"; 
 import ReviewCertsModal from "../components/m-review-certs.jsx";
+import ReportUserModal from "../components/m-report-user-modal.jsx";
+import SupportModal from "../components/m-support-modal.jsx";
 import AnalyticsDashboard from "../components/m-analytics-dashboard.jsx";
+import ModeratorInboxModal from "../components/m-inbox-modal.jsx";
 import "../styles/m-create-post.css";
 import ReviewReportModal from "../components/m-review-report.jsx"; // Import the new modal
 import PostModal from "../components/m-create-post.jsx";
@@ -19,12 +22,13 @@ import ProfileModal from "../components/modal-profile.jsx";
 import SettingModal from "../components/modal-settings.jsx";
 import { ThemeProvider } from "../components/ThemeContext";
 import { logAuditAction } from "../utils/auditLogger.js";
+import { checkEventStatus } from "../utils/eventUtils.js";
 
 // =========================================================
 // Comment Section Component
 // Hides comments beyond the last 3 automatically on load
 // =========================================================
-const CommentSection = ({ postId, comments, handleAddComment }) => {
+const CommentSection = ({ postId, comments, handleAddComment, onEditComment, onDeleteComment, onReportComment }) => {
     const [newComment, setNewComment] = useState("");
     const [showAllComments, setShowAllComments] = useState(false); 
 
@@ -35,6 +39,27 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
             setNewComment("");
             // Do NOT auto-expand on new comment; keep default collapsed
         }
+    };
+
+    const [editingCommentId, setEditingCommentId] = useState(null);
+    const [openMenuCommentId, setOpenMenuCommentId] = useState(null);
+    const [editedText, setEditedText] = useState('');
+
+    const handleEditClick = (comment) => {
+        setEditingCommentId(comment.id);
+        setEditedText(comment.text);
+    };
+
+    const handleCancelEdit = () => {
+        setOpenMenuCommentId(null);
+        setEditingCommentId(null);
+        setEditedText('');
+    };
+
+    const handleSaveEdit = () => {
+        onEditComment(postId, editingCommentId, editedText);
+        handleCancelEdit();
+        setOpenMenuCommentId(null);
     };
 
     // Decide which comments to display
@@ -65,31 +90,56 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
             <div className="comments-list">
                 {commentsToDisplay.map((comment, index) => (
                     <div 
-                        key={index} 
+                        key={comment.id || index} 
                         className="comment" 
-                        style={{ 
-                            display: 'flex', 
-                            gap: '10px', 
-                            marginBottom: '10px',
-                            padding: '8px 0'
-                        }}
                     >
                         <img 
                             src={comment.authorAvatar} 
                             alt="avatar" 
                             style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover' }} 
                         />
-                        <div>
-                            <span style={{ fontWeight: '600', fontSize: '13px', color: '#111827' }}>
-                                {comment.author} 
-                            </span>
-                            <span className="comment-date">
-                                {new Date(comment.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                            </span>
-                            <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.4', color: '#374151' }}>
-                                {comment.text}
-                            </p>
-                        </div>
+                            {editingCommentId === comment.id ? (
+                                <div className="comment-edit-form">
+                                    <textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} />
+                                    <div className="comment-edit-actions">
+                                        <button onClick={handleSaveEdit}>Save</button>
+                                        <button onClick={handleCancelEdit}>Cancel</button>
+                                    </div>
+                                </div>
+                            ) : (
+                              <div className="comment-body">
+                                <div className="comment-text-content">
+                                  <span style={{ fontWeight: '600', fontSize: '13px', color: '#111827' }}>{comment.author}</span>              
+                                  <span className="comment-date">
+                                    {new Date(comment.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                  </span>
+                                  <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.4', color: '#374151' }}>{comment.text}</p>
+                                </div>
+                                <div className="comment-options-container">
+                                  <button className="comment-options-btn" onClick={() => setOpenMenuCommentId(openMenuCommentId === comment.id ? null : comment.id)}>
+                                    <FaEllipsisH />
+                                  </button>
+                                  {openMenuCommentId === comment.id && (
+                                    comment.author === 'Community Moderator' ? (
+                                      <div className="comment-actions-menu">
+                                        <button onClick={() => { handleEditClick(comment); setOpenMenuCommentId(null); }}>
+                                          <FaEdit /> Edit
+                                        </button>
+                                        <button onClick={() => { onDeleteComment(postId, comment.id); setOpenMenuCommentId(null); }} className="delete">
+                                          <FaTrash /> Delete
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="comment-actions-menu">
+                                        <button onClick={() => { onReportComment(comment); setOpenMenuCommentId(null); }} className="report">
+                                          <FaExclamationTriangle /> Report
+                                        </button>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            )}
                     </div>
                 ))}
             </div>
@@ -143,7 +193,7 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
 // =========================================================
 // Main Content Feed Component
 // =========================================================
-const MainContentFeed = ({ posts, handleDeletePost, handleEditClick, renderPostImages, openImageModal, handleAddComment, openMenuPostId, setOpenMenuPostId }) => {
+const MainContentFeed = ({ posts, handleDeletePost, handleEditClick, renderPostImages, openImageModal, handleAddComment, openMenuPostId, setOpenMenuPostId, handleEditComment, handleDeleteComment, handleReportComment, getCategoryClass }) => {
     return (
         <div className="feed-content">
             {/* Posts Feed - Social Media Style */}
@@ -154,6 +204,9 @@ const MainContentFeed = ({ posts, handleDeletePost, handleEditClick, renderPostI
                         <div className="post-info">
                             <span className="author-name">{post.author}</span>
                             <span className="post-time">
+                                {post.category && (
+                                    <span className={`post-category-badge ${getCategoryClass(post.category)}`}>{post.category}</span>
+                                )}
                               {new Date(post.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                             </span>
                         </div>
@@ -187,6 +240,9 @@ const MainContentFeed = ({ posts, handleDeletePost, handleEditClick, renderPostI
                         postId={post.id}
                         comments={post.comments}
                         handleAddComment={handleAddComment}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
+                        onReportComment={handleReportComment}
                     />
                 </div>
             ))}
@@ -217,6 +273,36 @@ function ModeratorHome() {
     const [description, setDescription] = useState("");
     const [images, setImages] = useState([]);
     const [date, setDate] = useState(new Date());
+    const [category, setCategory] = useState('General');
+    const [sortOrder, setSortOrder] = useState('newest');
+    const [filterCategory, setFilterCategory] = useState('All');
+
+    const POST_CATEGORIES = [
+        'General', 'Event', 'Health Advisory', 'Safety Alert', 
+        'Community Program', 'Traffic Update', 'Weather Alert', 
+        'Maintenance Notice', 'Other'
+    ];
+
+    const getCategoryClass = (categoryName) => {
+        if (!categoryName) return 'category-general';
+        return `category-${categoryName.toLowerCase().replace(/\s+/g, '-')}`;
+    };
+
+    const processedPosts = useMemo(() => {
+        let filtered = posts;
+        if (filterCategory === 'All') {
+            filtered = [...posts];
+        } else {
+            filtered = posts.filter(post => post.category === filterCategory);
+        }
+
+        return filtered.sort((a, b) => {
+            return sortOrder === 'newest' ? b.date - a.date : a.date - b.date;
+        });
+    }, [posts, filterCategory, sortOrder]);
+
+
+
 
     const [isPostModalOpen, setIsPostModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -228,6 +314,11 @@ function ModeratorHome() {
     const [isReviewReportModalOpen, setIsReviewReportModalOpen] = useState(false);
     const [isReviewCertsModalOpen, setIsReviewCertsModalOpen] = useState(false);
     const [allReports, setAllReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
+    const [isReportUserModalOpen, setIsReportUserModalOpen] = useState(false);
+    const [reportingUser, setReportingUser] = useState(null); // For reporting a user/comment
+    const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+    const [isInboxModalOpen, setIsInboxModalOpen] = useState(false);
+    const [moderatorInbox, setModeratorInbox] = useState(() => JSON.parse(localStorage.getItem('moderatorInbox')) || []);
     const [certificationRequests, setCertificationRequests] = useState(() => JSON.parse(localStorage.getItem('certificationRequests')) || []);
 
     // Event-related state
@@ -235,6 +326,9 @@ function ModeratorHome() {
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [selectedEventDate, setSelectedEventDate] = useState(new Date());
     const [currentEvent, setCurrentEvent] = useState({ id: null, title: '', description: '', time: '', endTime: '' });
+    const [notificationStatus, setNotificationStatus] = useState(null); // 'clearing'
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [postSubmissionStatus, setPostSubmissionStatus] = useState(null); // 'saving', 'deleting', 'success'
     const [eventSubmissionStatus, setEventSubmissionStatus] = useState(null); // 'saving', 'deleting', 'success'
 
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -260,11 +354,12 @@ function ModeratorHome() {
             setModeratorNotifications(JSON.parse(localStorage.getItem("moderatorNotifications")) || []);
             setCertificationRequests(JSON.parse(localStorage.getItem("certificationRequests")) || []);
             setEvents(JSON.parse(localStorage.getItem("calendarEvents")) || []);
+            setModeratorInbox(JSON.parse(localStorage.getItem("moderatorInbox")) || []);
         };
         loadData();
 
         const handleStorageChange = (e) => {
-            if (['announcements', 'userReports', 'moderatorNotifications', 'certificationRequests', 'calendarEvents'].includes(e.key)) {
+            if (['announcements', 'userReports', 'moderatorNotifications', 'certificationRequests', 'calendarEvents', 'moderatorInbox'].includes(e.key)) {
                 loadData();
             }
         };
@@ -272,86 +367,133 @@ function ModeratorHome() {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
+    // NEW: Effect to update current time every 30 seconds for live event checking
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 30000); // Update every 30 seconds
+        return () => clearInterval(timer);
+    }, []);
+
     // Save events to localStorage
     useEffect(() => {
         localStorage.setItem("calendarEvents", JSON.stringify(events));
     }, [events]);
 
+    // Save moderator inbox to localStorage
+    useEffect(() => {
+        localStorage.setItem("moderatorInbox", JSON.stringify(moderatorInbox));
+    }, [moderatorInbox]);
+
+    const cleanupEvents = useCallback(() => {
+        const storedEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
+        if (storedEvents.length === 0) return;
+
+        const now = new Date();
+        const upcomingEvents = [];
+        const justEndedEvents = [];
+
+        storedEvents.forEach(event => {
+            let eventEndDateTime;
+            if (event.endTime) {
+                eventEndDateTime = new Date(`${event.date}T${event.endTime}`);
+            } else if (event.time) {
+                eventEndDateTime = new Date(new Date(`${event.date}T${event.time}`).getTime() + 60 * 60 * 1000);
+            } else {
+                eventEndDateTime = new Date(`${event.date}T23:59:59`);
+            }
+
+            if (eventEndDateTime >= now) {
+                upcomingEvents.push(event);
+            } else {
+                justEndedEvents.push(event);
+            }
+        });
+
+        if (upcomingEvents.length !== storedEvents.length) {
+            setEvents(upcomingEvents);
+            const newNotifications = justEndedEvents.map(event => ({
+                id: Date.now() + Math.random(),
+                type: 'event_ended',
+                message: `The event "${event.title}" has ended.`,
+                isRead: false,
+                date: Date.now(),
+            }));
+
+            if (newNotifications.length > 0) {
+                setModeratorNotifications(prevNotifs => {
+                    const allNotifs = [...newNotifications, ...prevNotifs];
+                    localStorage.setItem('moderatorNotifications', JSON.stringify(allNotifs));
+                    return allNotifs;
+                });
+            }
+        }
+    }, []);
+
     // Automatically clean up past events from localStorage on load and every minute
     useEffect(() => {
-        const cleanupEvents = () => {
-            const allEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
-            if (allEvents.length > 0) {
-                const now = new Date();
-                const upcoming = allEvents.filter(event => {
-                    const eventEndString = event.endTime || event.time || '23:59:59';
-                    const eventEndDateTime = new Date(`${event.date}T${eventEndString}`);
-                    return eventEndDateTime >= now;
-                });
-
-                if (upcoming.length !== allEvents.length) {
-                    setEvents(upcoming);
-                }
-            }
-        };
-
         cleanupEvents(); // Run once on mount
         const intervalId = setInterval(cleanupEvents, 60000); // Run every 60 seconds
         return () => clearInterval(intervalId); // Cleanup on unmount
-    }, []); 
+    }, [cleanupEvents]);
 
     const handlePost = () => {
+        setPostSubmissionStatus('saving');
+        setTimeout(() => {
         // If we are editing, call the update handler instead
         if (editingPost) {
-            const updatedPost = {
-                ...editingPost,
-                title,
-                description,
-                images,
-            };
-            setPosts(posts.map(p => p.id === editingPost.id ? updatedPost : p));
-            setEditingPost(null);
-            setTitle("");
-            setDescription("");
-            setImages([]);
-            setIsPostModalOpen(false); // Close modal after saving
-            return;
+                const updatedPost = {
+                    ...editingPost,
+                    title,
+                    description,
+                    category,
+                    images,
+                };
+                setPosts(posts.map(p => p.id === editingPost.id ? updatedPost : p));
+                logAuditAction('Updated Announcement', { postId: editingPost.id, title }, 'moderator');
+            } else {
+                // Logic for creating a new post
+                if (description.trim()) {
+                    const newPost = {
+                        id: Date.now(),
+                        title,
+                        description,
+                        images,
+                        author: "Community Moderator",
+                        authorAvatar: "https://via.placeholder.com/48/2563eb/ffffff?text=M",
+                        category: category,
+                        date: Date.now(), // Store date as a timestamp
+                        comments: [], // Initialize comments array
+                    };
+                    setPosts([newPost, ...posts]);
+                    logAuditAction('Created Announcement', { postId: newPost.id, title: newPost.title }, 'moderator');
+
+                    // Create a notification for the new announcement
+                    const notif = {
+                        id: Date.now(),
+                        type: 'new_announcement',
+                        message: `A new announcement has been posted: "${title || description.slice(0, 30) + '...'}"`,
+                        postId: newPost.id,
+                        isRead: false,
+                        date: Date.now()
+                    };
+                    const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
+                    localStorage.setItem('notifications', JSON.stringify([notif, ...currentNotifs]));
+                }
+            }
+
+            setPostSubmissionStatus('success');
+            setTimeout(() => {
+                setIsPostModalOpen(false);
+                setEditingPost(null);
+                setTitle("");
+                setDescription("");
+                setImages([]);
+                setCategory('General');
+                setPostSubmissionStatus(null);
+            }, 1000);
+        }, 1000);
         }
-
-        // Logic for creating a new post
-        if (description.trim()) {
-            const newPost = {
-                id: Date.now(),
-                title,
-                description,
-                images,
-                author: "Community Moderator", 
-                authorAvatar: "https://via.placeholder.com/48/2563eb/ffffff?text=M",
-                date: Date.now(), // Store date as a timestamp
-                comments: [], // Initialize comments array
-            };
-            setPosts([newPost, ...posts]);
-            logAuditAction('Created Announcement', { postId: newPost.id, title: newPost.title }, 'moderator');
-
-            // Create a notification for the new announcement
-            const notif = {
-                id: Date.now(),
-                type: 'new_announcement',
-                message: `A new announcement has been posted: "${title || description.slice(0, 30) + '...'}"`,
-                postId: newPost.id,
-                isRead: false,
-                date: Date.now()
-            };
-            const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
-            localStorage.setItem('notifications', JSON.stringify([notif, ...currentNotifs]));
-
-            // Reset form fields after successful post
-            setTitle("");
-            setDescription("");
-            setImages([]);
-            setIsPostModalOpen(false);
-        }
-    };
     
     // Save posts to localStorage whenever they change
     useEffect(() => {
@@ -368,17 +510,28 @@ function ModeratorHome() {
         }
     };
 
+    const handleRemoveImage = (indexToRemove) => {
+        // Revoke the object URL to prevent memory leaks
+        URL.revokeObjectURL(images[indexToRemove]);
+        setImages(images.filter((_, index) => index !== indexToRemove));
+    };
+
     const handleDeletePost = (postId) => {
         if (window.confirm("Are you sure you want to delete this post?")) {
-            setPosts(posts.filter(post => post.id !== postId));
-            logAuditAction('Deleted Announcement', { postId }, 'moderator');
-        }
+            setPostSubmissionStatus('deleting');
+            setTimeout(() => {
+                setPosts(posts.filter(post => post.id !== postId));
+                logAuditAction('Deleted Announcement', { postId }, 'moderator');
+                setPostSubmissionStatus(null); // Reset status after deletion
+            }, 1000);
+        }
     };
 
     const handleEditClick = (post) => {
         setEditingPost(post);
         setTitle(post.title);
         setDescription(post.description);
+        setCategory(post.category || 'General');
         setImages(post.images);
         setIsPostModalOpen(true);
     };
@@ -452,6 +605,8 @@ function ModeratorHome() {
                 certificateType: requestToUpdate.type,
                 requester: requestToUpdate.requester,
                 purpose: requestToUpdate.purpose,
+                frontIdImage: requestToUpdate.frontIdImage,
+                backIdImage: requestToUpdate.backIdImage,
                 dateApproved: Date.now(),
                 isRead: false,
             };
@@ -479,8 +634,13 @@ function ModeratorHome() {
 
     const handleClearNotifications = () => {
         if (window.confirm("Are you sure you want to clear all notifications?")) {
-            setModeratorNotifications([]);
-            localStorage.setItem('moderatorNotifications', JSON.stringify([]));
+            setNotificationStatus('clearing');
+            setTimeout(() => {
+                setModeratorNotifications([]);
+                localStorage.setItem('moderatorNotifications', JSON.stringify([]));
+                setNotificationStatus(null); // Reset status
+                setIsNotificationModalOpen(false); // Close modal after clearing
+            }, 1000);
         }
     };
 
@@ -490,6 +650,25 @@ function ModeratorHome() {
             setModeratorNotifications(updatedNotifications);
             localStorage.setItem('moderatorNotifications', JSON.stringify(updatedNotifications));
         }
+    };
+
+    const handleOpenInbox = () => {
+        setIsInboxModalOpen(true);
+        // Mark all inbox messages as read when opened
+        const updatedMessages = moderatorInbox.map(msg => ({ ...msg, isRead: true }));
+        setModeratorInbox(updatedMessages);
+    };
+
+    const handleMarkInboxAsRead = (messageId) => {
+        const updatedMessages = moderatorInbox.map(msg =>
+            msg.id === messageId ? { ...msg, isRead: true } : msg
+        );
+        setModeratorInbox(updatedMessages);
+    };
+
+    const handleDeleteInboxMessage = (messageId) => {
+        const updatedMessages = moderatorInbox.filter(msg => msg.id !== messageId);
+        setModeratorInbox(updatedMessages);
     };
 
     const handleClearAllDashboardData = () => {
@@ -508,6 +687,8 @@ function ModeratorHome() {
         setTitle("");
         setDescription("");
         setImages([]);
+        setCategory('General');
+        setPostSubmissionStatus(null);
     };
 
 
@@ -520,8 +701,11 @@ function ModeratorHome() {
     // --- Comment Handler ---
     const handleAddComment = (postId, commentText) => {
         const newComment = {
+            id: Date.now(),
             author: "User/Resident Placeholder", 
             authorAvatar: "https://via.placeholder.com/30/cccccc/ffffff?text=U",
+            author: "Community Moderator", 
+            authorAvatar: "https://via.placeholder.com/48/2563eb/ffffff?text=M",
             date: Date.now(), // Store date as a timestamp
             text: commentText,
         };
@@ -534,6 +718,48 @@ function ModeratorHome() {
             )
         );
     };
+
+    const handleEditComment = (postId, commentId, newText) => {
+        setPosts(posts.map(post => {
+            if (post.id === postId) {
+                return {
+                    ...post,
+                    comments: post.comments.map(comment => 
+                        comment.id === commentId ? { ...comment, text: newText } : comment
+                    )
+                };
+            }
+            return post;
+        }));
+    };
+
+    const handleDeleteComment = (postId, commentId) => {
+        if (window.confirm("Are you sure you want to delete this comment?")) {
+            const updatedPosts = posts.map(post => post.id === postId ? { ...post, comments: post.comments.filter(c => c.id !== commentId) } : post);
+            setPosts(updatedPosts);
+        }
+    };
+
+    const handleReportComment = (comment) => {
+        setReportingUser(comment.author); // Pass the author's name
+        setIsSupportModalOpen(true); // Open the main support modal
+        logAuditAction('Opened Report Form for Comment', { reportedUser: comment.author, commentId: comment.id }, 'moderator');
+    };
+
+    const handleReportCommentSubmit = (user, reason) => {
+        // 'user' here is the comment object we passed
+        console.log(`Reporting comment by ${user.author} to admin. Reason: ${reason}`);
+        const adminMessage = {
+            id: Date.now(),
+            subject: `Comment Report: ${user.author}`,
+            body: `A comment has been reported.\n\nAuthor: ${user.author}\nComment: "${user.text}"\n\nReason for report: ${reason}`,
+            date: Date.now(),
+            isRead: false,
+        };
+        // In a real app, this would go to an admin-specific inbox, but for now, we can log it
+        // or create a new localStorage item for admin messages.
+        logAuditAction('Reported Comment to Admin', { reportedUser: user.author, commentId: user.id, reason }, 'moderator');
+    };
 
     // --- Event Handlers ---
     const handleSelectDate = (date) => {
@@ -580,6 +806,17 @@ function ModeratorHome() {
                 const newEvent = { ...eventToSave, id: Date.now() };
                 setEvents([...events, newEvent]);
                 logAuditAction('Created Event', { eventId: newEvent.id, title: newEvent.title, time: newEvent.time, endTime: newEvent.endTime }, 'moderator');
+
+                // Notify residents about the new event
+                const notif = {
+                    id: Date.now() + 1, // avoid collision
+                    type: 'new_event',
+                    message: `A new event has been scheduled: "${newEvent.title}"`,
+                    isRead: false,
+                    date: Date.now(),
+                };
+                const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
+                localStorage.setItem('notifications', JSON.stringify([notif, ...currentNotifs]));
             }
             setEventSubmissionStatus('success');
             setTimeout(() => {
@@ -594,6 +831,32 @@ function ModeratorHome() {
         setTimeout(() => {
             setEvents(events.filter(e => e.id !== eventId));
             logAuditAction('Deleted Event', { eventId }, 'moderator');
+            setEventSubmissionStatus('success');
+            setTimeout(() => {
+                setIsEventModalOpen(false);
+                setEventSubmissionStatus(null);
+            }, 1500);
+        }, 1000);
+    };
+
+    const handleEndEvent = (eventId) => {
+        setEventSubmissionStatus('saving');
+        setTimeout(() => {
+            const now = new Date();
+            const updatedEvents = events.map(e => {
+                if (e.id === eventId) {
+                    logAuditAction('Manually Ended Event', { eventId, title: e.title }, 'moderator');
+                    const toYYYYMMDD = (d) => {
+                        return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                    };
+                    // Set end time to now to trigger cleanup
+                    // Also set date to today to prevent future events from reappearing
+                    return { ...e, date: toYYYYMMDD(now), endTime: now.toTimeString().slice(0, 5) };
+                }
+                return e;
+            });
+            setEvents(updatedEvents); // This will trigger the save to localStorage
+            cleanupEvents(); // Immediately process the ended event
             setEventSubmissionStatus('success');
             setTimeout(() => {
                 setIsEventModalOpen(false);
@@ -687,12 +950,21 @@ function ModeratorHome() {
     };
 
     // --- Image Rendering Logic (for post modal preview) ---
-    const renderPreviewImages = (previewImages) => {
+    const renderPreviewImages = (previewImages, onRemove) => {
         const totalImages = previewImages.length;
         return (
             <div className={`preview-images preview-images-${Math.min(totalImages, 4)}`}>
                 {previewImages.slice(0, 4).map((img, index) => (
-                    <img src={img} alt={`preview ${index}`} key={index} />
+                    <div className="preview-image-container" key={index}>
+                        <img src={img} alt={`preview ${index}`} />
+                        <button 
+                            type="button" 
+                            className="remove-preview-btn" 
+                            onClick={() => onRemove(index)}
+                        >
+                            <FaTimes />
+                        </button>
+                    </div>
                 ))}
                 {previewImages.length > 4 && (
                     <div className="preview-count-overlay">
@@ -744,6 +1016,33 @@ function ModeratorHome() {
       <ThemeProvider>
         <div className="moderator-page">
             <ImagePreviewModal />
+            {/* --- NEW: Global Post Submission Overlay --- */}
+            {postSubmissionStatus && (
+                <div className="submission-overlay-global">
+                    <div className="submission-content">
+                        {postSubmissionStatus === 'saving' && (
+                            <>
+                                <div className="spinner"></div>
+                                <p>{editingPost ? "Saving Changes..." : "Creating Post..."}</p>
+                            </>
+                        )}
+                        {postSubmissionStatus === 'deleting' && (
+                            <>
+                                <div className="spinner"></div>
+                                <p>Deleting Post...</p>
+                            </>
+                        )}
+                        {postSubmissionStatus === 'success' && (
+                            <>
+                                <FaCheckCircle className="success-icon" size={60} />
+                                <p>Success!</p>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
+
             <ProfileModal 
               isOpen={isProfileModalOpen}
               onClose={() => setIsProfileModalOpen(false)}
@@ -761,8 +1060,10 @@ function ModeratorHome() {
                 setImages={setImages}
                 handlePost={handlePost}
                 handleImageChange={handleImageChange}
-                renderPreviewImages={renderPreviewImages}
+                renderPreviewImages={(imgs) => renderPreviewImages(imgs, handleRemoveImage)}
                 editingPost={editingPost}
+                category={category}
+                setCategory={setCategory}
             />
 
             <SettingModal
@@ -793,6 +1094,7 @@ function ModeratorHome() {
                 notifications={moderatorNotifications}
                 onClear={handleClearNotifications}
                 onDelete={handleDeleteNotification}
+                submissionStatus={notificationStatus}
             />
 
             <EventModal
@@ -805,8 +1107,29 @@ function ModeratorHome() {
                 setEventTime={(time) => setCurrentEvent(prev => ({ ...prev, time }))}
                 setEventEndTime={(endTime) => setCurrentEvent(prev => ({ ...prev, endTime }))}
                 onSave={handleSaveEvent}
-                onDelete={handleDeleteEvent}
+                onEnd={handleEndEvent}
                 submissionStatus={eventSubmissionStatus}
+            />
+
+            <SupportModal
+                isOpen={isSupportModalOpen}
+                onClose={() => setIsSupportModalOpen(false)}
+                initialReportedUser={reportingUser}
+            />
+
+            <ModeratorInboxModal
+                isOpen={isInboxModalOpen}
+                onClose={() => setIsInboxModalOpen(false)}
+                messages={moderatorInbox}
+                onMarkAsRead={handleMarkInboxAsRead}
+                onDelete={handleDeleteInboxMessage}
+            />
+
+            <ReportUserModal
+                isOpen={isReportUserModalOpen}
+                onClose={() => setIsReportUserModalOpen(false)}
+                user={reportingUser}
+                onSubmit={handleReportCommentSubmit}
             />
 
 
@@ -833,8 +1156,16 @@ function ModeratorHome() {
                             )}
                         </button>
 
+                        <button className="m-sidebar-btn soft-blue" onClick={handleOpenInbox}>
+                            <FaInbox size={30} />
+                            <span>Inbox</span>
+                            {moderatorInbox.filter(m => !m.isRead).length > 0 && (
+                                <span className="notification-badge">{moderatorInbox.filter(m => !m.isRead).length}</span>
+                            )}
+                        </button>
+
                         <button 
-                            className="m-sidebar-btn soft-blue" 
+                            className="m-sidebar-btn purple" 
                             onClick={() => setIsPostModalOpen(true)}
                         >
                             <FaPlus size={30} />
@@ -863,7 +1194,10 @@ function ModeratorHome() {
                             )}
                         </button>
                         
-                        <button className="m-sidebar-btn green">
+                        <button
+                            className="m-sidebar-btn green"
+                            onClick={() => setIsSupportModalOpen(true)}
+                        >
                             <FaHeadset size={30} />
                             <span>Support</span>
                         </button>
@@ -900,16 +1234,34 @@ function ModeratorHome() {
                             requests={certificationRequests} 
                             onClearAllData={handleClearAllDashboardData} />
                     ) : (
-                        <MainContentFeed
-                            posts={posts}
-                            handleDeletePost={handleDeletePost}
-                            handleEditClick={handleEditClick}
-                            renderPostImages={renderPostImages}
-                            openImageModal={openImageModal}
-                            openMenuPostId={openMenuPostId}
-                            setOpenMenuPostId={setOpenMenuPostId}
-                            handleAddComment={handleAddComment}
-                        />
+                        <>
+                            <div className="feed-controls">
+                                <select id="sort-posts" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} title="Sort posts">
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                </select>
+                                <select id="filter-category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} title="Filter by category">
+                                    <option value="All">All Categories</option>
+                                    {POST_CATEGORIES.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <MainContentFeed
+                                posts={processedPosts}
+                                handleDeletePost={handleDeletePost}
+                                handleEditClick={handleEditClick}
+                                renderPostImages={renderPostImages}
+                                openImageModal={openImageModal}
+                                openMenuPostId={openMenuPostId}
+                                setOpenMenuPostId={setOpenMenuPostId}
+                                handleAddComment={handleAddComment}
+                                handleEditComment={handleEditComment}
+                                handleDeleteComment={handleDeleteComment}
+                                handleReportComment={handleReportComment}
+                                getCategoryClass={getCategoryClass}
+                            />
+                        </>
                     )}
                 </main>
 
@@ -930,11 +1282,17 @@ function ModeratorHome() {
                         <div className="events-list">
                             {upcomingEvents.length > 0 ? (
                                 upcomingEvents.map(event => {
-                                    const todayString = new Date().toISOString().split('T')[0];
-                                    const isToday = event.date === todayString;
+                                    const { isToday, isHappeningNow, hasEnded } = checkEventStatus(event, currentTime);
+
+                                    const eventClasses = `event-item ${isToday ? 'event-item-today' : ''} ${
+                                        isHappeningNow ? 'event-item-now' : hasEnded ? 'event-item-ended' : 'event-item-upcoming'
+                                    }`;
                                     return (
-                                        <div key={event.id} className={`event-item ${isToday ? 'event-item-today' : ''}`} onClick={() => handleOpenEventModal(event)}>
-                                            <p className="event-item-title">{event.title}</p>
+                                        <div key={event.id} className={eventClasses} onClick={() => handleOpenEventModal(event)}>
+                                            <div className="event-item-header">
+                                                <p className="event-item-title">{event.title}</p>
+                                                {isHappeningNow && <span className="live-badge">On Going</span>}
+                                            </div>
                                             <p className="event-item-desc">{event.description}</p>
                                             <p className="event-item-date-display">
                                                 {new Date(event.date.replace(/-/g, '/')).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}

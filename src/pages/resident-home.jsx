@@ -1,6 +1,6 @@
 // pages/Home.jsx
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Calendar from "react-calendar"; 
 import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
@@ -17,7 +17,9 @@ import {
   FaTimes,
   FaChevronLeft,
   FaChevronRight,
-  FaEllipsisH,
+  FaEllipsisH,  
+  FaEdit,
+  FaTrash,
 } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md";
 import Header from "../components/header.jsx";
@@ -30,14 +32,17 @@ import NotificationModal from "../components/modal-notification.jsx"; // Import 
 import RequestCertificationModal from "../components/modal-request-cert.jsx";
 import ViewEventsModal from "../components/view-events-modal.jsx";
 import InboxModal from "../components/modal-inbox.jsx";
+import SupportModal from "../components/r-support-modal.jsx";
 import { logAuditAction } from "../utils/auditLogger.js";
+import { checkEventStatus } from "../utils/eventUtils.js";
 
 // =========================================================
 // Comment Section Component (Copied from moderator-home.jsx)
 // =========================================================
-const CommentSection = ({ postId, comments, handleAddComment }) => {
+const CommentSection = ({ postId, comments, handleAddComment, onEditComment, onDeleteComment, onReportComment }) => {
   const [newComment, setNewComment] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -45,6 +50,27 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
       handleAddComment(postId, newComment);
       setNewComment("");
     }
+  };
+
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [openMenuCommentId, setOpenMenuCommentId] = useState(null);
+  const [editedText, setEditedText] = useState('');
+
+  const handleEditClick = (comment) => {
+      setEditingCommentId(comment.id);
+      setEditedText(comment.text);
+  };
+
+  const handleCancelEdit = () => {
+      setOpenMenuCommentId(null);
+      setEditingCommentId(null);
+      setEditedText('');
+  };
+
+  const handleSaveEdit = () => {
+      onEditComment(postId, editingCommentId, editedText);
+      handleCancelEdit();
+      setOpenMenuCommentId(null);
   };
 
   const commentsToDisplay = showAllComments ? comments : comments.slice(-3);
@@ -64,15 +90,50 @@ const CommentSection = ({ postId, comments, handleAddComment }) => {
 
       <div className="comments-list">
         {commentsToDisplay.map((comment, index) => (
-          <div key={index} className="comment" style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '8px 0' }}>
+          <div key={comment.id || index} className="comment">
             <img src={comment.authorAvatar} alt="avatar" style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover' }} />
-            <div>
-              <span style={{ fontWeight: '600', fontSize: '13px', color: '#111827' }}>{comment.author}</span>              
-              <span className="comment-date">
-                {new Date(comment.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-              </span>
-              <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.4', color: '#374151' }}>{comment.text}</p>
-            </div>
+            {editingCommentId === comment.id ? (
+                <div className="comment-edit-form">
+                    <textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} />
+                    <div className="comment-edit-actions">
+                        <button onClick={handleSaveEdit}>Save</button>
+                        <button onClick={handleCancelEdit}>Cancel</button>
+                    </div>
+                </div>
+            ) : (
+              <div className="comment-body">
+                <div className="comment-text-content">
+                  <span style={{ fontWeight: '600', fontSize: '13px', color: '#111827' }}>{comment.author}</span>              
+                  <span className="comment-date">
+                    {new Date(comment.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                  <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.4', color: '#374151' }}>{comment.text}</p>
+                </div>
+                <div className="comment-options-container">
+                  <button className="comment-options-btn" onClick={() => setOpenMenuCommentId(openMenuCommentId === comment.id ? null : comment.id)}>
+                    <FaEllipsisH />
+                  </button>
+                  {openMenuCommentId === comment.id && (
+                    comment.author === 'Resident User' ? (
+                      <div className="comment-actions-menu">
+                        <button onClick={() => { handleEditClick(comment); setOpenMenuCommentId(null); }}>
+                          <FaEdit /> Edit
+                        </button>
+                        <button onClick={() => { onDeleteComment(postId, comment.id); setOpenMenuCommentId(null); }} className="delete">
+                          <FaTrash /> Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="comment-actions-menu">
+                        <button onClick={() => { onReportComment(comment); setOpenMenuCommentId(null); }} className="report">
+                          <FaExclamationTriangle /> Report
+                        </button>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -102,7 +163,9 @@ function Home() {
   const [isViewReportsModalOpen, setIsViewReportsModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reportingUser, setReportingUser] = useState(null);
   const [submissionStatus, setSubmissionStatus] = useState(null); // 'submitting', 'success', 'error'
   const [notifications, setNotifications] = useState(() => JSON.parse(localStorage.getItem('notifications')) || []);
   const [userReports, setUserReports] = useState(() => JSON.parse(localStorage.getItem('userReports')) || []);
@@ -117,9 +180,35 @@ function Home() {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalImages, setModalImages] = useState([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [sortOrder, setSortOrder] = useState('newest');
+  const [filterCategory, setFilterCategory] = useState('All');
+
+  const POST_CATEGORIES = [
+      'General', 'Event', 'Health Advisory', 'Safety Alert', 
+      'Community Program', 'Traffic Update', 'Weather Alert', 
+      'Maintenance Notice', 'Other'
+  ];
 
   const navigate = useNavigate();
+
+  const getCategoryClass = (categoryName) => {
+    if (!categoryName) return 'category-general';
+    return `category-${categoryName.toLowerCase().replace(/\s+/g, '-')}`;
+  };
   
+  const processedPosts = useMemo(() => {
+    let filtered = posts;
+    if (filterCategory === 'All') {
+        filtered = [...posts];
+    } else {
+        filtered = posts.filter(post => post.category === filterCategory);
+    }
+
+    return filtered.sort((a, b) => {
+        return sortOrder === 'newest' ? b.date - a.date : a.date - b.date;
+    });
+  }, [posts, filterCategory, sortOrder]);
   // Load data and listen for changes from other tabs
   useEffect(() => {
     const loadData = () => {
@@ -141,6 +230,14 @@ function Home() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // NEW: Effect to update current time every 30 seconds for live event checking
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000); // Update every 30 seconds
+    return () => clearInterval(timer);
+  }, []);
+
   // Save data to localStorage when it changes in this component
   useEffect(() => {
     localStorage.setItem("userReports", JSON.stringify(userReports));
@@ -152,33 +249,64 @@ function Home() {
     localStorage.setItem("residentInbox", JSON.stringify(inboxMessages));
   }, [inboxMessages]);
 
-  // Automatically clean up past events from localStorage on load
   useEffect(() => {
-        const cleanupEvents = () => {
-            const allEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
-            if (allEvents.length > 0) {
-                const now = new Date();
-                const upcoming = allEvents.filter(event => {
-                    // Use end time, fall back to start time, fall back to end of day
-                    const eventEndString = event.endTime || event.time || '23:59:59';
-                    const eventEndDateTime = new Date(`${event.date}T${eventEndString}`);
-                    return eventEndDateTime >= now;
-                });
+    const cleanupEvents = () => {
+      const storedEvents = JSON.parse(localStorage.getItem("calendarEvents")) || [];
+      if (storedEvents.length === 0) return;
 
-                if (upcoming.length !== allEvents.length) {
-                    setEvents(upcoming);
-                }
-            }
-        };
+      const now = new Date();
+      const upcomingEvents = [];
+      const justEndedEvents = [];
 
-        cleanupEvents(); // Run once on mount
-        const intervalId = setInterval(cleanupEvents, 60000); // Run every 60 seconds
-        return () => clearInterval(intervalId); // Cleanup on unmount
-    }, []); 
+      storedEvents.forEach((event) => {
+        let eventEndDateTime;
+        if (event.endTime) {
+          eventEndDateTime = new Date(`${event.date}T${event.endTime}`);
+        } else if (event.time) {
+          eventEndDateTime = new Date(
+            new Date(`${event.date}T${event.time}`).getTime() + 60 * 60 * 1000
+          );
+        } else {
+          eventEndDateTime = new Date(`${event.date}T23:59:59`);
+        }
+
+        if (eventEndDateTime >= now) {
+          upcomingEvents.push(event);
+        } else {
+          justEndedEvents.push(event);
+        }
+      });
+
+      if (upcomingEvents.length !== storedEvents.length) {
+        setEvents(upcomingEvents);
+
+        const newNotifications = justEndedEvents.map((event) => ({
+          id: Date.now() + Math.random(),
+          type: "event_ended",
+          message: `The event "${event.title}" has ended.`,
+          isRead: false,
+          date: Date.now(),
+        }));
+
+        if (newNotifications.length > 0) {
+          setNotifications((prevNotifs) => {
+            const allNotifs = [...newNotifications, ...prevNotifs];
+            localStorage.setItem("notifications", JSON.stringify(allNotifs));
+            return allNotifs;
+          });
+        }
+      }
+    };
+
+    cleanupEvents(); // Run once on mount
+    const intervalId = setInterval(cleanupEvents, 60000); // Run every 60 seconds
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, []);
 
   // --- Comment Handler ---
   const handleAddComment = (postId, commentText) => {
     const newComment = {
+      id: Date.now(),
       author: "Resident User", // Placeholder for logged-in user
       authorAvatar: "https://via.placeholder.com/30/7c3aed/ffffff?text=R",
       date: Date.now(), // Store date as a timestamp
@@ -193,6 +321,54 @@ function Home() {
 
     setPosts(updatedPosts);
     localStorage.setItem("announcements", JSON.stringify(updatedPosts)); // Also update localStorage
+  };
+
+  const handleEditComment = (postId, commentId, newText) => {
+      setPosts(posts.map(post => {
+          if (post.id === postId) {
+              return {
+                  ...post,
+                  comments: post.comments.map(comment => 
+                      comment.id === commentId ? { ...comment, text: newText } : comment
+                  )
+              };
+          }
+          return post;
+      }));
+  };
+
+  const handleDeleteComment = (postId, commentId) => {
+      if (window.confirm("Are you sure you want to delete this comment?")) {
+          const updatedPosts = posts.map(post => post.id === postId ? { ...post, comments: post.comments.filter(c => c.id !== commentId) } : post);
+          setPosts(updatedPosts);
+          localStorage.setItem("announcements", JSON.stringify(updatedPosts));
+      }
+  };
+
+  const handleReportComment = (comment) => {
+    setReportingUser(comment.author);
+    setIsSupportModalOpen(true);
+    logAuditAction('Opened Report Form for Comment', { reportedUser: comment.author, commentId: comment.id }, 'resident');
+  };
+
+  const handleReportUserSubmit = (reportedUserName, reason) => {
+    const newReport = {
+        id: Date.now(),
+        date: Date.now(),
+        status: "submitted",
+        type: "User Behavior", // A new, distinct type
+        description: `Report against ${reportedUserName}: ${reason}`,
+        media: [],
+        location: null,
+    };
+    setUserReports(prev => [...prev, newReport]);
+    logAuditAction('Submitted User Behavior Report', { reportedUser: reportedUserName }, 'resident');
+
+    // Create a notification for the moderator
+    const modNotif = { id: Date.now() + 1, type: 'new_report', message: `A new user behavior report has been submitted.`, reportId: newReport.id, isRead: false, date: Date.now() };
+    const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
+    localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
+    alert(`Your report against "${reportedUserName}" has been submitted to the moderator for review.`);
   };
 
   const handleReportSubmit = async (reportData) => {
@@ -546,14 +722,14 @@ function Home() {
       <SettingModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        role="resident"
+        role="residenta"
       />
 
       <ReportModal
         isOpen={isReportModalOpen}
         onClose={() => {
           setIsReportModalOpen(false);
-          setSubmissionStatus(null); // Reset status on close
+          setSubmissionStatus(null); 
         }}
         onSubmit={handleReportSubmit}
         submissionStatus={submissionStatus}
@@ -581,6 +757,13 @@ function Home() {
         notifications={notifications}
         onClear={handleClearNotifications}
         onDelete={handleDeleteNotification}
+      />
+
+      <SupportModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+        onReportUser={handleReportUserSubmit}
+        initialReportedUser={reportingUser}
       />
 
       <RequestCertificationModal
@@ -626,11 +809,20 @@ function Home() {
               )}
             </button>
 
-            <button className="sidebar-btn green notification-bell-btn" onClick={() => setIsInboxModalOpen(true)}>
+            <button className="sidebar-btn soft-blue notfication-bell-btn" onClick={() => setIsInboxModalOpen(true)}>
               <FaInbox size={30} />
               <span>Inbox</span>
               {inboxMessages.filter(m => !m.isRead).length > 0 && (
                 <span className="notification-badge">{inboxMessages.filter(m => !m.isRead).length}</span>
+              )}
+            </button>
+
+            <button className="sidebar-btn purple"
+              onClick={handleOpenViewReports}>
+              <FaClipboardList size={30} />
+              <span>View and Track Reports</span>
+              {notifications.filter(n => n.type === 'report_update' && !n.isRead).length > 0 && (
+                <span className="notification-badge">{notifications.filter(n => n.type === 'report_update' && !n.isRead).length}</span>
               )}
             </button>
 
@@ -644,15 +836,14 @@ function Home() {
               <span>File a Report</span>
             </button>
 
-            <button className="sidebar-btn purple"
-              onClick={handleOpenViewReports}>
-              <FaClipboardList size={30} />
-              <span>View and Track Reports</span>
-              {notifications.filter(n => n.type === 'report_update' && !n.isRead).length > 0 && (
-                <span className="notification-badge">{notifications.filter(n => n.type === 'report_update' && !n.isRead).length}</span>
-              )}
-            </button>
 
+            <button
+              className="sidebar-btn green"
+              onClick={() => setIsSupportModalOpen(true)}
+            >
+              <FaHeadset size={30} />
+              <span>Support</span>
+            </button>
 
             <button className="sidebar-btn gray"
               onClick={() => setIsSettingsModalOpen(true)}>
@@ -660,39 +851,68 @@ function Home() {
               <span>Settings</span>
             </button>
 
-            <button className="sidebar-btn soft-teal">
-              <FaInfoCircle size={30} />
-              <span>About Us</span>
-            </button>
           </div>
         </aside>
 
         {/* Main Feed */}
         <main className="main-content">
-          {posts.length > 0 ? (
-            posts.map((post) => (
-              <div className="update-card" key={post.id}>
-                <div className="post-header">
-                  <img src={post.authorAvatar} alt="author avatar" className="author-avatar" />
-                  <div className="post-info">
-                    <span className="author-name">{post.author}</span>
-                    <span className="post-time">{new Date(post.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                  </div>
-                  <button className="options-btn" title="Post Options">
-                    <FaEllipsisH size={18} />
-                  </button>
-                </div>
-
-                {post.title && <p className="update-title">{post.title}</p>}
-                <p className="update-description">{post.description}</p>
-
-                {post.images && post.images.length > 0 && renderPostImages(post.images, openImageModal)}
-
-                <div style={{ borderTop: '1px solid #e5e7eb', margin: '15px 0 0 0' }}></div>
-
-                <CommentSection postId={post.id} comments={post.comments || []} handleAddComment={handleAddComment} />
+          <div className="feed-header">
+            <h3>Announcements Feed</h3>
+          </div>
+          {processedPosts.length > 0 || filterCategory !== 'All' ? (
+            <>
+              <div className="feed-controls">
+                  <select id="sort-posts" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} title="Sort posts">
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                  </select>
+                  <select id="filter-category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} title="Filter by category">
+                      <option value="All">All Categories</option>
+                      {POST_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                  </select>
               </div>
-            ))
+              {processedPosts.length > 0 ? processedPosts.map((post) => (
+                <div className="update-card" key={post.id}>
+                  <div className="post-header">
+                    <img src={post.authorAvatar} alt="author avatar" className="author-avatar" />
+                    <div className="post-info">
+                      <span className="author-name">{post.author}</span>
+                      <span className="post-time">
+                        {post.category && (
+                            <span className={`post-category-badge ${getCategoryClass(post.category)}`}>{post.category}</span>
+                        )}
+                        {new Date(post.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                      </span>
+                    </div>
+                    <button className="options-btn" title="Post Options">
+                      <FaEllipsisH size={18} />
+                    </button>
+                  </div>
+
+                  {post.title && <p className="update-title">{post.title}</p>}
+                  <p className="update-description">{post.description}</p>
+
+                  {post.images && post.images.length > 0 && renderPostImages(post.images, openImageModal)}
+
+                  <div style={{ borderTop: '1px solid #e5e7eb', margin: '15px 0 0 0' }}></div>
+
+                  <CommentSection 
+                    postId={post.id} 
+                    comments={post.comments || []} 
+                    handleAddComment={handleAddComment}
+                    onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment}
+                    onReportComment={handleReportComment} />
+                </div>
+              )) : (
+                <div className="no-announcements" style={{ marginTop: '20px' }}>
+                  <h3>No Announcements Found</h3>
+                  <p>There are no announcements matching the selected category.</p>
+                </div>
+              )}
+            </>
           ) : (
             <div className="no-announcements">
               <img
@@ -722,11 +942,17 @@ function Home() {
             <div className="events-list">
               {upcomingEvents.length > 0 ? (
                 upcomingEvents.map(event => {
-                  const todayString = new Date().toISOString().split('T')[0];
-                  const isToday = event.date === todayString;
+                  const { isToday, isHappeningNow, hasEnded } = checkEventStatus(event, currentTime);
+
+                  const eventClasses = `event-item ${isToday ? 'event-item-today' : ''} ${
+                    isHappeningNow ? 'event-item-now' : hasEnded ? 'event-item-ended' : 'event-item-upcoming'
+                  }`;
                   return (
-                    <div key={event.id} className={`event-item ${isToday ? 'event-item-today' : ''}`} onClick={() => handleDateClick(new Date(event.date))}>
-                      <p className="event-item-title">{event.title}</p>
+                    <div key={event.id} className={eventClasses} onClick={() => handleDateClick(new Date(event.date))}>
+                      <div className="event-item-header">
+                        <p className="event-item-title">{event.title}</p>
+                        {isHappeningNow && <span className="live-badge">On Going</span>}
+                      </div>
                       {event.description && <p className="event-item-desc">{event.description}</p>}
                       <p className="event-item-date-display">
                         {new Date(event.date.replace(/-/g, '/')).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}

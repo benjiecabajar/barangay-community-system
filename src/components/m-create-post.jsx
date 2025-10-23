@@ -1,7 +1,19 @@
 import React from "react";
-import { FaTimes } from "react-icons/fa";
+import { FaTimes, FaSyncAlt, FaCheckCircle } from "react-icons/fa";
 import "../styles/moderator-home.css";
 import "../styles/m-create-post.css";
+
+const POST_CATEGORIES = [
+  'General',
+  'Event',
+  'Health Advisory',
+  'Safety Alert',
+  'Community Program',
+  'Traffic Update',
+  'Weather Alert',
+  'Maintenance Notice',
+  'Other',
+];
 
 const PostModal = ({
   isOpen,
@@ -15,7 +27,9 @@ const PostModal = ({
   handlePost,
   handleImageChange,
   renderPreviewImages,
-  editingPost, // Add editingPost to props
+  editingPost,
+  category,
+  setCategory,
 }) => {
   if (!isOpen) return null;
 
@@ -24,6 +38,7 @@ const PostModal = ({
     setTitle("");
     setDescription("");
     setImages([]);
+    setCategory(POST_CATEGORIES[0]); // Reset to default
     onClose();
   };
 
@@ -47,6 +62,20 @@ const PostModal = ({
         </div>
 
         <form onSubmit={handleFormSubmit}>
+          <div className="form-row">
+            <div className="form-group-half">
+              <label htmlFor="post-category">Category</label>
+              <select
+                id="post-category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                {POST_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           <input
             type="text"
             placeholder="Add a title (Optional)"

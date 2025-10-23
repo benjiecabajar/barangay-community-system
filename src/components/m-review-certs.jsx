@@ -142,6 +142,27 @@ const ReviewCertsModal = ({ isOpen, onClose, requests, onUpdateStatus, onDeleteR
                             <p><strong>Date Requested:</strong> {new Date(selectedRequest.date).toLocaleString()}</p>
                             <p><strong>Current Status:</strong> <StatusBadge status={selectedRequest.status} /></p>
 
+                            {/* Display Resident's ID */}
+                            {(selectedRequest.frontIdImage || selectedRequest.backIdImage) && (
+                                <div className="id-images-container">
+                                    <h4>Resident's Provided ID:</h4>
+                                    <div className="id-image-wrapper">
+                                        {selectedRequest.frontIdImage && (
+                                            <div className="id-image-item">
+                                                <p>Front of ID</p>
+                                                <img src={selectedRequest.frontIdImage} alt="Front of ID" />
+                                            </div>
+                                        )}
+                                        {selectedRequest.backIdImage && (
+                                            <div className="id-image-item">
+                                                <p>Back of ID</p>
+                                                <img src={selectedRequest.backIdImage} alt="Back of ID" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Show Approve/Decline for pending requests */}
                             {selectedRequest.status === 'Pending' && (
                                 <div className="moderator-actions">

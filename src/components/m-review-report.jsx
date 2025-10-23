@@ -35,6 +35,7 @@ const REPORT_FILTER_TYPES = [
   'Noise Complaint',
   'Pest Control',
   'Facilities Issue',
+  'User Behavior',
 ];
 
 const ReviewReportModal = ({ isOpen, onClose, reports, onUpdateReportStatus, onDeleteReport }) => {

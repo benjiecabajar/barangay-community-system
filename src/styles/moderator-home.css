@@ -189,6 +189,9 @@
   background-color: var(--bg-primary);
   height: 90vh;
   padding: 1.5rem;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  overflow-x:hidden;
 }
 
 .feed-content {
@@ -295,11 +298,6 @@
   transition: box-shadow 0.3s ease, transform 0.2s ease;;
 }
 
-.update-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--brand-primary);
-}
-
 /* SOCIAL MEDIA POST HEADER STYLE */
 .post-header {
     display: flex;
@@ -327,6 +325,65 @@
     font-weight: 600;
     color: var(--text-primary);
 }
+
+.feed-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Move to the right */
+    gap: 5px;
+    margin-left:40px;
+}
+
+.feed-controls select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-secondary);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    width: 145px; /* Make the dropdowns smaller */
+}
+
+.post-category-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 8px;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.category-general { background-color: #6b7280; } /* Gray */
+.category-event { background-color: #8b5cf6; } /* Violet */
+.category-health-advisory { background-color: #0ea5e9; } /* Sky Blue */
+.category-safety-alert { background-color: #f97316; } /* Orange */
+.category-community-program { background-color: #10b981; } /* Emerald Green */
+.category-traffic-update { background-color: #f59e0b; } /* Amber */
+
+
+/* Styles for new form elements in Post Modal */
+.post-form .form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.post-form .form-group-half {
+    flex: 1;
+}
+
+.post-form .form-group-half label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+}
+
 
 .post-time {
     font-size: 13px;
@@ -871,12 +928,6 @@
     padding-right: 5px; /* Add some space for the scrollbar */
 }
 
-.events-box .event-item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-}
 
 .events-box .event-item-date {
   font-size: 12px;
@@ -900,6 +951,56 @@
   box-shadow: 0 4px 10px rgba(249, 115, 22, 0.1);
 }
 
+.events-box .event-item-now {
+    border-left-color: #10b981;
+    background: linear-gradient(90deg, #dcfce7, var(--bg-secondary));
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+}
+
+
+.event-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.live-badge {
+    background-color: #10b981; /* Vibrant Green */
+    color: white;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: pulse-badge 1.5s infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.85;
+    }
+}
 .events-box .event-item:hover {
   background-color: var(--bg-primary);
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -1176,6 +1277,88 @@
     color: var(--text-secondary);
 }
 
+.comment-body {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.comment-actions button {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+.comment-actions button:hover {
+    color: var(--brand-primary);
+}
+
+.comment-edit-form textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-primary);
+    margin-bottom: 5px;
+}
+
+.comment-edit-actions button {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-primary);
+    cursor: pointer;
+    margin-right: 5px;
+    font-size: 0.8rem;
+    background-color: var(--bg-secondary);
+}
+
+.comment-options-container {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.comment-options-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 50%;
+}
+
+.comment-options-btn:hover {
+    background-color: var(--bg-secondary);
+}
+
+.comment-actions-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10;
+    width: 120px;
+    overflow: hidden;
+    border: 1px solid var(--border-primary);
+}
+
+.comment-actions-menu button.delete {
+    color: #ef4444;
+}
+
+
+
 /* Submission Overlay for Event Modal */
 .event-modal-content .submission-overlay {
   position: absolute;
@@ -1219,4 +1402,38 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* --- NEW: Global Submission Overlay --- */
+.submission-overlay-global {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100; /* Higher than other modals */
+    color: var(--text-primary);
+}
+
+.submission-overlay-global .submission-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--bg-primary);
+    padding: 40px 60px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.submission-overlay-global p {
+    margin-top: 20px;
+    font-size: 1.1rem;
+    font-weight: 600;
 }

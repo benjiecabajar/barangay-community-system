@@ -22,6 +22,7 @@
     border-radius: 16px;
     margin-top: 50px;
     width: 550px;
+    height: 77vh;
     max-width: 90vw;
     max-height: 77vh; /* Set a max height */
     display: flex; /* Enable flexbox */

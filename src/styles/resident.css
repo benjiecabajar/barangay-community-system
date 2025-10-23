@@ -146,10 +146,14 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  padding-right: 20px;
   gap: 20px;
   background-color: var(--bg-secondary);
-  height: 90vh;
+  /* Adjust layout to allow independent scrolling */
+  margin-left: 320px; /* left-panel width + gap */
+  margin-right: 340px; /* right-panel width + gap */
+  padding: 20px;
+  height: calc(100vh - 70px); /* Adjust based on header height */
+  overflow-y: auto;
 }
 
 /* ---------------------------------------------------- */
@@ -166,10 +170,6 @@
   transition: box-shadow 0.3s ease, transform 0.2s ease;;
 }
 
-.update-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--brand-primary);
-}
 
 /* SOCIAL MEDIA POST HEADER STYLE */
 .post-header {
@@ -199,10 +199,63 @@
     color: var(--text-primary);
 }
 
+.feed-header {
+    width: 650px;
+    margin-bottom: -50px;
+    text-align: left;
+  
+}
+
+.feed-header h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.feed-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Move to the right */
+    gap: 5px;
+    width: 650px;
+
+}
+
+.feed-controls select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-secondary);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    width: 145px; /* Make the dropdowns smaller */
+}
+
 .post-time {
     font-size: 13px;
     color: var(--text-tertiary); 
 }
+
+.post-category-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 8px;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.category-general { background-color: #6b7280; } /* Gray */
+.category-event { background-color: #8b5cf6; } /* Violet */
+.category-health-advisory { background-color: #0ea5e9; } /* Sky Blue */
+.category-safety-alert { background-color: #f97316; } /* Orange */
+.category-community-program { background-color: #10b981; } /* Emerald Green */
+.category-traffic-update { background-color: #f59e0b; } /* Amber */
 
 /* Options/Delete Buttons */
 .options-btn {
@@ -411,15 +464,6 @@
 
 
 
-.events-box .event-item-date {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-
-
 .events-box .event-item {
   background: var(--bg-secondary);
   border-radius: 8px;
@@ -433,7 +477,56 @@
   box-shadow: 0 4px 10px rgba(249, 115, 22, 0.1);
 }
 
+/* --- NEW: Happening Now Event Style --- */
+.events-box .event-item-now {
+    border-left-color: #10b981; /* A vibrant green */
+    background: linear-gradient(90deg, #dcfce7, var(--bg-secondary));
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+    animation: pulse-green 2s infinite;
+}
 
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+}
+
+.event-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.live-badge {
+    background-color: #10b981; /* Vibrant Green */
+    color: white;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: pulse-badge 1.5s infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.85;
+    }
+}
 .events-box .event-item-title {
   font-weight: 600;
   font-size: 14px;
