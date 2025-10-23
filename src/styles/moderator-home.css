@@ -210,8 +210,7 @@
     display: flex;
     gap: 0.5rem;
     border-bottom: 1px solid var(--border-primary);
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.3rem;
     flex-shrink: 0;
 }
 
@@ -298,6 +297,11 @@
   transition: box-shadow 0.3s ease, transform 0.2s ease;;
 }
 
+.update-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--brand-primary);
+}
+
 /* SOCIAL MEDIA POST HEADER STYLE */
 .post-header {
     display: flex;
@@ -330,21 +334,25 @@
     display: flex;
     align-items: center;
     justify-content: flex-end; /* Move to the right */
-    gap: 5px;
-    margin-left:40px;
+    margin-left: 70px;
+
 }
 
 .feed-controls select {
     padding: 6px 10px;
     border-radius: 8px;
-    border: 1px solid var(--border-secondary);
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    font-weight: 500;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-primary);
+    font-weight: 600;
+    color: var(--text-secondary);
     cursor: pointer;
-    width: 145px; /* Make the dropdowns smaller */
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
+.feed-controls select:hover {
+    border-color: var(--brand-primary);
+}
 .post-category-badge {
     display: inline-block;
     padding: 2px 8px;

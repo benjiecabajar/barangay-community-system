@@ -164,12 +164,16 @@
   background: var(--bg-primary);
   border-radius: 16px;
   padding: 20px; 
-  margin-top: 30px;
+  margin-top: 10px;
   box-shadow: var(--card-shadow);
   width: 650px;
   transition: box-shadow 0.3s ease, transform 0.2s ease;;
 }
 
+.update-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--brand-primary);
+}
 
 /* SOCIAL MEDIA POST HEADER STYLE */
 .post-header {
@@ -203,6 +207,7 @@
     width: 650px;
     margin-bottom: -50px;
     text-align: left;
+    margin-right: 70px;
   
 }
 
@@ -218,7 +223,10 @@
     align-items: center;
     justify-content: flex-end; /* Move to the right */
     gap: 5px;
+    gap: 1rem;
+    margin-bottom: 1rem;
     width: 650px;
+    
 
 }
 
@@ -229,10 +237,19 @@
     background-color: var(--bg-secondary);
     color: var(--text-primary);
     font-weight: 500;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-primary);
+    font-weight: 600;
+    color: var(--text-secondary);
     cursor: pointer;
     width: 145px; /* Make the dropdowns smaller */
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
+.feed-controls select:hover {
+    border-color: var(--brand-primary);
+}
 .post-time {
     font-size: 13px;
     color: var(--text-tertiary); 
