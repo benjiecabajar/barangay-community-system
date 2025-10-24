@@ -24,7 +24,13 @@ const ReviewCertsModal = ({ isOpen, onClose, requests, onUpdateStatus, onDeleteR
     const handleStatusUpdate = (newStatus) => {
         if (selectedRequest) {
             onUpdateStatus(selectedRequest.id, newStatus);
-            setSelectedRequest(prev => ({ ...prev, status: newStatus }));
+            // After updating the status, go back to the list view
+            // to reflect that the item has moved out of the "Pending" queue.
+            if (newStatus === 'Approved' || newStatus === 'Declined') {
+                setSelectedRequest(null);
+            } else {
+                setSelectedRequest(prev => ({ ...prev, status: newStatus }));
+            }
         }
     };
 

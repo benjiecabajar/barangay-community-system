@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FaTimes, FaRegSadTear, FaChevronLeft, FaEnvelopeOpen, FaTrash } from 'react-icons/fa';
 import '../styles/m-inbox-modal.css';
 
+
 const ModeratorInboxModal = ({ isOpen, onClose, messages, onMarkAsRead, onDelete, onClearAll }) => {
     const [selectedMessage, setSelectedMessage] = useState(null);
 

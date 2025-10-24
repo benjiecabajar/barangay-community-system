@@ -32,6 +32,27 @@ const SupportModal = ({ isOpen, onClose, onReportUser, initialReportedUser }) =>
 
 
 
+    // Listen for the custom event to scroll to the report section
+    useEffect(() => {
+        const handler = (e) => {
+            const payload = e?.detail || {};
+            if (!isOpen) return; // Only act if the modal is open
+
+            if (payload.reportedUser) {
+                setReportedUserName(payload.reportedUser);
+            }
+
+            // Scroll the report area into view and focus the textarea
+            if (reportSectionRef.current) {
+                reportSectionRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+                reportSectionRef.current.querySelector('textarea')?.focus();
+            }
+        };
+
+        window.addEventListener("openSupportReport", handler);
+        return () => window.removeEventListener("openSupportReport", handler);
+    }, [isOpen]); // Re-run if the modal's open state changes
+
 
     useEffect(() => {
         if (isOpen) {
@@ -175,7 +196,7 @@ const SupportModal = ({ isOpen, onClose, onReportUser, initialReportedUser }) =>
                                             id="issue-description"
                                             value={issueDescription}
                                             onChange={(e) => setIssueDescription(e.target.value)}
-                                            placeholder="Please describe the issue in detail..."
+                                            placeholder="Please describe in detail..."
                                             required
                                         ></textarea>
                                     </div>

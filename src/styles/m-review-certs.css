@@ -148,6 +148,81 @@
     text-align: center;
 }
 
+/* --- Detail View Grid --- */
+.request-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+    margin: 16px 0;
+    padding: 16px;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+/* --- ID Image Display --- */
+.id-images-container {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-primary);
+}
+
+.id-images-header {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 12px 0;
+}
+
+.id-image-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.id-image-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.id-image-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.id-image-item img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border-secondary);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.id-image-item img:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
 
 /* Re-use existing styles for other statuses and buttons */
 @keyframes fadeInOverlay {

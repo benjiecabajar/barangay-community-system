@@ -1,15 +1,27 @@
 .inbox-modal-overlay {
     position: fixed;
-    top: 0;
+    top: 40px; /* Start overlay below the header */
+    /* Add animation for the overlay */
+    animation: fadeInOverlay 0.35s ease forwards;
+}
+
+/* Keyframes for overlay fade-in */
+@keyframes fadeInOverlay {
+    from { opacity: 0; backdrop-filter: blur(0px); }
+    to { opacity: 1; backdrop-filter: blur(8px); } /* Use the existing blur value */
+}
+
+.inbox-modal-overlay {
+    position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.5); /* Slightly darker for better focus */
     backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1050;
+    z-index: 1000;
 }
 
 .inbox-modal-content {
@@ -23,22 +35,31 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Add animation for the modal content */
+    animation: slideUpModal 0.4s ease forwards;
+}
+
+/* Keyframes for modal content slide-up */
+@keyframes slideUpModal {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .inbox-modal-content .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 15px;
+
     border-bottom: 1px solid var(--border-primary);
-    margin-bottom: 10px;
 }
 
 .inbox-modal-content .modal-header h2 {
     font-size: 1.3rem;
+    margin-left: 20px;
     font-weight: 700;
-    margin-top: 30px;
-    margin-left: 30px;
+    /* Removed specific margins, let flexbox handle alignment */
+    padding-bottom: 10px;
+    padding-top: 20px;
     color: var(--brand-primary);
 }
 
@@ -50,8 +71,8 @@
     width: 32px;
     height: 32px;
     cursor: pointer;
-    margin-top: 70px;
-    margin-right: 410px;
+    /* Removed specific margins, let flexbox handle alignment */
+    margin: 0; 
     display: flex;
     justify-content: center;
     align-items: center;
@@ -87,6 +108,11 @@
     transition: background-color 0.2s, box-shadow 0.2s;
     border-left: 4px solid transparent;
 }
+
+.message-item.deleting {
+    animation: fadeOut 0.5s ease-out forwards;
+}
+
 
 .message-item:hover {
     background: var(--bg-tertiary);
@@ -143,6 +169,34 @@
     font-weight: 500;
 }
 
+.message-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s, background-color 0.2s, color 0.2s;
+    margin-left: 15px;
+}
+
+.message-item:hover .message-delete-btn {
+    opacity: 1;
+}
+
+.message-delete-btn:hover {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: scaleY(1); max-height: 100px; }
+  to { opacity: 0; transform: scaleY(0.8); max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
+}
 /* Certificate View */
 .certificate-paper {
     border: 1px solid var(--border-primary);

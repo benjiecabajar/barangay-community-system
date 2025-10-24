@@ -170,10 +170,6 @@
   transition: box-shadow 0.3s ease, transform 0.2s ease;;
 }
 
-.update-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--brand-primary);
-}
 
 /* SOCIAL MEDIA POST HEADER STYLE */
 .post-header {

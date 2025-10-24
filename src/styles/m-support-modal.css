@@ -6,17 +6,19 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1050;
+    z-index: 1000;
     animation: fadeInOverlay 0.3s ease;
 }
 
 .support-modal-content {
+
     background: var(--bg-primary);
     padding: 25px;
+    margin-top: 50px;
     border-radius: 16px;
     width: 100%;
     max-width: 650px;
-    max-height: 85vh;
+    max-height: 80vh;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     animation: slideUpModal 0.4s ease;
     display: flex;
@@ -49,7 +51,7 @@
     width: 32px;
     height: 32px;
     margin-right: 410px;
-    margin-top:30px;
+    margin-top:70px;
     cursor: pointer;
     display: flex;
     justify-content: center;

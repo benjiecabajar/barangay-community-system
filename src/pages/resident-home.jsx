@@ -19,6 +19,7 @@ import {
   FaChevronRight,
   FaEllipsisH,  
   FaEdit,
+  FaExclamationTriangle,
   FaTrash,
 } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md";
@@ -165,6 +166,7 @@ function Home() {
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [certSubmissionStatus, setCertSubmissionStatus] = useState(null); // 'submitting', 'success', 'error'
   const [reportingUser, setReportingUser] = useState(null);
   const [submissionStatus, setSubmissionStatus] = useState(null); // 'submitting', 'success', 'error'
   const [notifications, setNotifications] = useState(() => JSON.parse(localStorage.getItem('notifications')) || []);
@@ -177,6 +179,7 @@ function Home() {
   const [isViewEventsModalOpen, setIsViewEventsModalOpen] = useState(false);
   const [eventsForModal, setEventsForModal] = useState([]);
 
+  const [certModalKey, setCertModalKey] = useState(Date.now());
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalImages, setModalImages] = useState([]);
@@ -306,21 +309,21 @@ function Home() {
   // --- Comment Handler ---
   const handleAddComment = (postId, commentText) => {
     const newComment = {
-      id: Date.now(),
-      author: "Resident User", // Placeholder for logged-in user
-      authorAvatar: "https://via.placeholder.com/30/7c3aed/ffffff?text=R",
-      date: Date.now(), // Store date as a timestamp
-      text: commentText,
+        id: Date.now(),
+        author: "Resident User",
+        authorAvatar: "https://via.placeholder.com/30/7c3aed/ffffff?text=R",
+        date: Date.now(),
+        text: commentText
     };
 
     const updatedPosts = posts.map(post =>
       post.id === postId
-        ? { ...post, comments: [...post.comments, newComment] }
+        ? { ...post, comments: [...(post.comments || []), newComment] }
         : post
     );
 
     setPosts(updatedPosts);
-    localStorage.setItem("announcements", JSON.stringify(updatedPosts)); // Also update localStorage
+    localStorage.setItem("announcements", JSON.stringify(updatedPosts));
   };
 
   const handleEditComment = (postId, commentId, newText) => {
@@ -349,6 +352,18 @@ function Home() {
     setReportingUser(comment.author);
     setIsSupportModalOpen(true);
     logAuditAction('Opened Report Form for Comment', { reportedUser: comment.author, commentId: comment.id }, 'resident');
+
+    // Notify the support modal (in case it's rendered via portal) so it can
+    // prefill and scroll to the report area reliably.
+    // Small timeout gives React time to render the modal into the DOM.
+    setTimeout(() => {
+      // This custom event is for a more robust way to communicate with the modal,
+      // especially if it were rendered in a portal or a different part of the DOM tree.
+      // The modal will listen for this event and scroll to the report section.
+      window.dispatchEvent(new CustomEvent('openSupportReport', {
+        detail: { reportedUser: comment.author, commentId: comment.id }
+      }));
+    }, 60); // A small delay is enough for React to render the modal.
   };
 
   const handleReportUserSubmit = (reportedUserName, reason) => {
@@ -456,35 +471,61 @@ function Home() {
     }
   };
 
-  const handleCertRequestSubmit = (requestData) => {
-    setSubmissionStatus('submitting');
-    setTimeout(() => {
-      const newRequest = {
-        id: Date.now(),
-        date: Date.now(),
-        status: "Pending",
-        type: requestData.type,
-        purpose: requestData.purpose,
-        requester: "Benjie Cabajar", // Placeholder for logged-in user
-      };
+  const handleCertRequestSubmit = async (requestData) => {
+    setCertSubmissionStatus('submitting');
 
-      const currentRequests = JSON.parse(localStorage.getItem('certificationRequests')) || [];
-      localStorage.setItem('certificationRequests', JSON.stringify([newRequest, ...currentRequests]));
+    try {
+        // Helper to convert a file to a base64 data URL
+        const toBase64 = file => new Promise((resolve, reject) => {
+            if (!file) resolve(null);
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
 
-      // Also create a notification for the moderator
-      const modNotif = { id: Date.now() + 2, type: 'new_cert_request', message: `A new "${newRequest.type}" has been requested.`, requestId: newRequest.id, isRead: false, date: Date.now() };
-      const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
-      localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
+        // Convert the ID images to base64
+        const frontIdImageBase64 = await toBase64(requestData.frontIdFile);
+        const backIdImageBase64 = await toBase64(requestData.backIdFile);
 
-      logAuditAction('Submitted Certificate Request', { type: newRequest.type }, 'resident');
-      setSubmissionStatus('success');
+        // Simulate API call delay
+        setTimeout(() => {
+            const newRequest = {
+                ...requestData,
+                id: Date.now(),
+                date: Date.now(),
+                status: "Pending",
+                requester: "Benjie Cabajar", // Placeholder
+                frontIdImage: frontIdImageBase64, // Use the base64 string
+                backIdImage: backIdImageBase64,   // Use the base64 string
+            };
+            delete newRequest.frontIdFile; // Clean up the file object
+            delete newRequest.backIdFile;  // Clean up the file object
 
-      setTimeout(() => {
-        setIsCertModalOpen(false);
-        setSubmissionStatus(null);
-      }, 1500);
+            const currentRequests = JSON.parse(localStorage.getItem('certificationRequests')) || [];
+            localStorage.setItem('certificationRequests', JSON.stringify([newRequest, ...currentRequests]));
 
-    }, 2000);
+            const modNotif = { id: Date.now() + 2, type: 'new_cert_request', message: `A new "${newRequest.type}" has been requested.`, requestId: newRequest.id, isRead: false, date: Date.now() };
+            const currentModNotifs = JSON.parse(localStorage.getItem('moderatorNotifications')) || [];
+            localStorage.setItem('moderatorNotifications', JSON.stringify([modNotif, ...currentModNotifs]));
+
+            logAuditAction('Submitted Certificate Request', { certId: newRequest.id, type: newRequest.type }, 'resident');
+            setCertSubmissionStatus('success');
+
+            setTimeout(() => {
+                setIsCertModalOpen(false);
+                setCertSubmissionStatus(null);
+            }, 1500);
+        }, 1500);
+    } catch (error) {
+        console.error("Certificate request submission failed:", error);
+        setCertSubmissionStatus('error');
+    }
+  };
+
+  const handleOpenCertModal = () => {
+    setCertModalKey(Date.now()); // Reset the modal by changing its key
+    setIsCertModalOpen(true);
   };
 
   const handleOpenViewReports = () => {
@@ -767,10 +808,14 @@ function Home() {
       />
 
       <RequestCertificationModal
+        key={certModalKey}
         isOpen={isCertModalOpen}
-        onClose={() => setIsCertModalOpen(false)}
+        onClose={() => {
+          setIsCertModalOpen(false);
+          setCertSubmissionStatus(null); // Reset on close
+        }}
         onSubmit={handleCertRequestSubmit}
-        submissionStatus={submissionStatus}
+        submissionStatus={certSubmissionStatus}
       />
 
       <ViewEventsModal
@@ -826,7 +871,7 @@ function Home() {
               )}
             </button>
 
-            <button className="sidebar-btn teal" onClick={() => setIsCertModalOpen(true)}>
+            <button className="sidebar-btn teal" onClick={handleOpenCertModal}>
               <MdOutlineAssignment size={30} />
               <span>Request Certification</span>
             </button>

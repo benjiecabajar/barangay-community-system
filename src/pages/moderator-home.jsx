@@ -603,7 +603,7 @@ function ModeratorHome() {
                 id: Date.now() + 2, // to avoid collision with notif
                 type: 'approved_certificate',
                 certificateType: requestToUpdate.type,
-                requester: requestToUpdate.requester,
+                requester: requestToUpdate.requester, // Pass as a string
                 purpose: requestToUpdate.purpose,
                 frontIdImage: requestToUpdate.frontIdImage,
                 backIdImage: requestToUpdate.backIdImage,
@@ -645,11 +645,9 @@ function ModeratorHome() {
     };
 
     const handleDeleteNotification = (notificationId) => {
-        if (window.confirm("Are you sure you want to delete this notification?")) {
-            const updatedNotifications = moderatorNotifications.filter(n => n.id !== notificationId);
-            setModeratorNotifications(updatedNotifications);
-            localStorage.setItem('moderatorNotifications', JSON.stringify(updatedNotifications));
-        }
+        const updatedNotifications = moderatorNotifications.filter(n => n.id !== notificationId);
+        setModeratorNotifications(updatedNotifications);
+        localStorage.setItem('moderatorNotifications', JSON.stringify(updatedNotifications));
     };
 
     const handleOpenInbox = () => {
@@ -702,8 +700,6 @@ function ModeratorHome() {
     const handleAddComment = (postId, commentText) => {
         const newComment = {
             id: Date.now(),
-            author: "User/Resident Placeholder", 
-            authorAvatar: "https://via.placeholder.com/30/cccccc/ffffff?text=U",
             author: "Community Moderator", 
             authorAvatar: "https://via.placeholder.com/48/2563eb/ffffff?text=M",
             date: Date.now(), // Store date as a timestamp
@@ -1286,7 +1282,7 @@ function ModeratorHome() {
 
                                     const eventClasses = `event-item ${isToday ? 'event-item-today' : ''} ${
                                         isHappeningNow ? 'event-item-now' : hasEnded ? 'event-item-ended' : 'event-item-upcoming'
-                                    }`;s
+                                    }`;
                                     return (
                                         <div key={event.id} className={eventClasses} onClick={() => handleOpenEventModal(event)}>
                                             <div className="event-item-header">

@@ -109,19 +109,18 @@ const ReportModal = ({ isOpen, onClose, onSubmit, submissionStatus }) => {
     navigator.geolocation.getCurrentPosition(async (position) => {
         const { latitude, longitude } = position.coords;
 
-        // --- NEW: Reverse Geocoding using Nominatim API ---
+      
         try {
           const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
           const data = await response.json();
-          // Use the display_name from the API, or fallback to coordinates
+        
           const address = data.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
           setLocation({ lat: latitude, lng: longitude, address: address });
         } catch (error) {
-          console.error("Reverse geocoding failed:", error);
-          // Fallback to just coordinates if the API call fails
+    
           setLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` });
         }
-        // --- END NEW ---
+
 
         setIsFetchingLocation(false);
       },

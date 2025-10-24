@@ -1,10 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { FaTimes, FaBell, FaRegSadTear, FaClipboardCheck, FaBullhorn, FaFileAlt } from "react-icons/fa";
 import "../styles/modal-notification.css";
 
-const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete }) => {
+const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete, submissionStatus }) => {
+  const [deletingNotifId, setDeletingNotifId] = useState(null);
+
   if (!isOpen) return null;
 
+  const handleDeleteClick = (id) => {
+    if (window.confirm("Are you sure you want to delete this notification?")) {
+      setDeletingNotifId(id);
+      // Wait for animation to finish before calling parent onDelete
+      setTimeout(() => {
+        onDelete(id);
+        setDeletingNotifId(null); // Reset for next deletion
+      }, 500); // Must match CSS animation duration
+    }
+  };
   const getNotificationIcon = (type) => {
     switch (type) {
         case 'new_report': // Moderator
@@ -24,6 +36,17 @@ const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete }
   return (
     <div className="notification-modal-overlay" onClick={onClose}>
       <div className="notification-modal-content" onClick={(e) => e.stopPropagation()}>
+        {submissionStatus && (
+          <div className="submission-overlay">
+            {submissionStatus === 'clearing' && (
+              <>
+                <div className="spinner"></div>
+                <p>Clearing Notifications...</p>
+              </>
+            )}
+            {/* You can add other statuses here if needed */}
+          </div>
+        )}
         <div className="modal-header">
           <h2>Notifications</h2>
           <button className="close-btn" onClick={onClose}>
@@ -31,7 +54,11 @@ const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete }
           </button>
         </div>
 
-        <div className="notification-body">
+        <div 
+          className={`notification-body ${
+            sortedNotifications.length === 0 ? 'no-scroll' : ''
+          }`}
+        >
           {sortedNotifications.length === 0 ? (
             <div className="no-notifications-placeholder">
               <FaRegSadTear size={50} />
@@ -41,7 +68,12 @@ const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete }
           ) : (
             <div className="notification-list">
               {sortedNotifications.map((notif) => (
-                <div key={notif.id} className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}>
+                <div 
+                  key={notif.id} 
+                  className={`notification-item ${notif.isRead ? 'read' : 'unread'} ${
+                    deletingNotifId === notif.id ? 'deleting' : ''
+                  }`}
+                >
                   <div className="notification-icon">
                     {getNotificationIcon(notif.type)}
                   </div>
@@ -53,7 +85,7 @@ const NotificationModal = ({ isOpen, onClose, notifications, onClear, onDelete }
                       })}
                     </small>
                   </div>
-                  <button className="notification-delete-btn" onClick={() => onDelete(notif.id)} title="Delete notification">
+                  <button className="notification-delete-btn" onClick={() => handleDeleteClick(notif.id)} title="Delete notification" disabled={deletingNotifId}>
                     <FaTimes size={12} />
                   </button>
                 </div>

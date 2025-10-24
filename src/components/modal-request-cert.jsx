@@ -64,20 +64,16 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
   useEffect(() => {
     // Cleanup on modal close
     if (!isOpen) {
-      stopCamera();
-      // Revoke all previews
-      if (idPreviews.front) URL.revokeObjectURL(idPreviews.front);
-      if (idPreviews.back) URL.revokeObjectURL(idPreviews.back);
-      if (residencyPreviews.govIdFront) URL.revokeObjectURL(residencyPreviews.govIdFront);
-      if (residencyPreviews.govIdBack) URL.revokeObjectURL(residencyPreviews.govIdBack);
-      if (residencyPreviews.utilityBill) URL.revokeObjectURL(residencyPreviews.utilityBill);
-      if (indigencyPreviews.front) URL.revokeObjectURL(indigencyPreviews.front);
-      if (indigencyPreviews.back) URL.revokeObjectURL(indigencyPreviews.back);
-      if (goodMoralPreviews.govIdFront) URL.revokeObjectURL(goodMoralPreviews.govIdFront);
-      if (goodMoralPreviews.govIdBack) URL.revokeObjectURL(goodMoralPreviews.govIdBack);
-      if (goodMoralPreviews.proofOfResidency) URL.revokeObjectURL(goodMoralPreviews.proofOfResidency);
-      if (goodMoralPreviews.communityTaxCert) URL.revokeObjectURL(goodMoralPreviews.communityTaxCert);
-      // Reset all file states
+      // Revoke all existing object URLs to prevent memory leaks
+      [idPreviews, residencyPreviews, indigencyPreviews, goodMoralPreviews].forEach(previewGroup => {
+        Object.values(previewGroup).forEach(url => {
+          if (url) URL.revokeObjectURL(url);
+        });
+      });
+
+      // Reset all state to initial values
+      setCertType(CERTIFICATE_TYPES[0]);
+      setPurpose('');
       setIdImages({ front: null, back: null });
       setIdPreviews({ front: null, back: null });
       setResidencyFiles({ govIdFront: null, govIdBack: null, utilityBill: null });
@@ -86,6 +82,9 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
       setIndigencyPreviews({ front: null, back: null });
       setGoodMoralFiles({ govIdFront: null, govIdBack: null, proofOfResidency: null, communityTaxCert: null });
       setGoodMoralPreviews({ govIdFront: null, govIdBack: null, proofOfResidency: null, communityTaxCert: null });
+      setClearanceForm({ firstName: '', middleName: '', lastName: '', address: '', dob: '', civilStatus: '' });
+      setResidencyForm({ firstName: '', middleName: '', lastName: '', address: '', lengthOfResidency: '' });
+      stopCamera();
     }
   }, [isOpen]);
 
@@ -241,42 +240,34 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (certType === CERTIFICATE_TYPES[0]) {
-      alert('Please select a certificate type.');
-      return;
-    }
-    if (!purpose.trim()) {
-      alert('Please state the purpose of your request.');
-      return;
-    }
 
-    const submissionData = {
+    const submission = {
       type: certType,
-      purpose: purpose,
-      idImages: idImages,
-      residencyFiles: residencyFiles,
-      indigencyFiles: indigencyFiles,
-      goodMoralFiles: goodMoralFiles,
-      clearanceDetails: certType === 'Barangay Clearance' ? clearanceForm : null,
-      residencyDetails: certType === 'Certificate of Residency' ? residencyForm : null,
+      purpose,
+      // Pass the raw file for conversion, and the preview for immediate display if needed elsewhere
+      frontIdFile: idImages.front,
+      backIdFile: idImages.back,
+      // Pass other form data
+      // For example, for residency:
+      // residencyData: certType === 'Certificate of Residency' ? { ...residencyForm, utilityBill: residencyPreviews.utilityBill } : null
     };
 
-    onSubmit(submissionData);
+    if (certType === 'Barangay Clearance') {
+      submission.details = clearanceForm;
+    }
+
+    // Call onSubmit or save to localStorage depending on your flow:
+    if (typeof onSubmit === 'function') {
+      onSubmit(submission);
+    } else {
+      const stored = JSON.parse(localStorage.getItem('certRequests') || '[]');
+      stored.unshift(submission);
+      localStorage.setItem('certRequests', JSON.stringify(stored));
+    }
   };
 
   const handleClose = () => {
-    setPurpose('');
-    setIdImages({ front: null, back: null });
-    setResidencyFiles({ govIdFront: null, govIdBack: null, utilityBill: null });
-    setIndigencyFiles({ front: null, back: null });
-    setGoodMoralFiles({ govId: null, proofOfResidency: null, communityTaxCert: null });
-    setIdPreviews({ front: null, back: null });
-    setResidencyPreviews({ govIdFront: null, govIdBack: null, utilityBill: null });
-    setIndigencyPreviews({ front: null, back: null });
-    setGoodMoralPreviews({ govId: null, proofOfResidency: null, communityTaxCert: null });
-    stopCamera();
-    setClearanceForm({ firstName: '', middleName: '', lastName: '', address: '', dob: '', civilStatus: '' });
-    setResidencyForm({ firstName: '', middleName: '', lastName: '', address: '', lengthOfResidency: '' });
+    // The useEffect hook now handles all cleanup. This just calls the parent's onClose.
     onClose();
   };
 
@@ -541,7 +532,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="residency-id-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="residency-id-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'govIdFront', 'residency')} />
+                        <input type="file" id="residency-govIdFront-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'govIdFront', 'residency')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('govIdFront', 'residency')}>
                         <FaCamera size={16} /> Camera
@@ -563,7 +554,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="residency-id-back-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="residency-id-back-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'govIdBack', 'residency')} />
+                        <input type="file" id="residency-govIdBack-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'govIdBack', 'residency')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('govIdBack', 'residency')}>
                         <FaCamera size={16} /> Camera
@@ -585,7 +576,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="residency-bill-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="residency-bill-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'utilityBill', 'residency')} />
+                        <input type="file" id="residency-utilityBill-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'utilityBill', 'residency')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('utilityBill', 'residency')}>
                         <FaCamera size={16} /> Camera
@@ -615,7 +606,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="indigency-id-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="indigency-id-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'front', 'indigency')} />
+                        <input type="file" id="indigency-front-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'front', 'indigency')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('front', 'indigency')}>
                         <FaCamera size={16} /> Camera
@@ -636,7 +627,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="indigency-id-back-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="indigency-id-back-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'back', 'indigency')} />
+                        <input type="file" id="indigency-back-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'back', 'indigency')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('back', 'indigency')}>
                         <FaCamera size={16} /> Camera
@@ -667,7 +658,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="goodmoral-id-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="goodmoral-id-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'govIdFront', 'goodMoral')} />
+                        <input type="file" id="goodmoral-govIdFront-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'govIdFront', 'goodMoral')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('govIdFront', 'goodMoral')}>
                         <FaCamera size={16} /> Camera
@@ -688,7 +679,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="goodmoral-id-back-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="goodmoral-id-back-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'govIdBack', 'goodMoral')} />
+                        <input type="file" id="goodmoral-govIdBack-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'govIdBack', 'goodMoral')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('govIdBack', 'goodMoral')}>
                         <FaCamera size={16} /> Camera
@@ -712,7 +703,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="goodmoral-residency-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="goodmoral-residency-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'proofOfResidency', 'goodMoral')} />
+                        <input type="file" id="goodmoral-proofOfResidency-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'proofOfResidency', 'goodMoral')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('proofOfResidency', 'goodMoral')} >
                         <FaCamera size={16} /> Camera
@@ -734,7 +725,7 @@ const RequestCertificationModal = ({ isOpen, onClose, onSubmit, submissionStatus
                     <div className="evidence-buttons">
                       <label htmlFor="goodmoral-cedula-upload" className="evidence-btn">
                         <FaUpload size={16} /> Upload
-                        <input type="file" id="goodmoral-cedula-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'communityTaxCert', 'goodMoral')} />
+                        <input type="file" id="goodmoral-communityTaxCert-upload" accept="image/*" onChange={(e) => handleFileChange(e, 'communityTaxCert', 'goodMoral')} />
                       </label>
                       <button type="button" className="evidence-btn" onClick={() => startCamera('communityTaxCert', 'goodMoral')} >
                         <FaCamera size={16} /> Camera

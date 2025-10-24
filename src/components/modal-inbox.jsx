@@ -1,106 +1,113 @@
 import React, { useState } from 'react';
-import { FaTimes, FaRegSadTear, FaChevronLeft, FaPrint, FaTrash } from 'react-icons/fa';
+import { FaTimes, FaInbox, FaRegSadTear, FaCertificate, FaPrint } from 'react-icons/fa';
 import '../styles/modal-inbox.css';
 
-const InboxModal = ({ isOpen, onClose, messages, onMarkAsRead, onDelete, onClearAll }) => {
+const InboxModal = ({ isOpen, onClose, messages, onMarkAsRead, onDelete }) => {
     const [selectedMessage, setSelectedMessage] = useState(null);
+    const [deletingMessageId, setDeletingMessageId] = useState(null);
 
     if (!isOpen) return null;
 
-    const handleSelectMessage = (message) => {
+    const handleMessageClick = (message) => {
         setSelectedMessage(message);
         if (!message.isRead) {
             onMarkAsRead(message.id);
         }
     };
 
-    const handleBackToList = () => {
-        setSelectedMessage(null);
-        // No need to call onDelete here, as it's for individual message deletion
+    const handleDeleteClick = (e, messageId) => {
+        e.stopPropagation(); // Prevent message from being selected
+        if (window.confirm("Are you sure you want to delete this message?")) {
+            setDeletingMessageId(messageId);
+            setTimeout(() => {
+                onDelete(messageId);
+                setDeletingMessageId(null);
+            }, 500); // Match animation duration
+        }
     };
 
     const handlePrint = () => {
         const printableContent = document.getElementById('printable-certificate');
-        const printWindow = window.open('', '', 'height=600,width=800');
-        printWindow.document.write('<html><head><title>Print Certificate</title>');
-        printWindow.document.write('<link rel="stylesheet" href="/src/styles/modal-inbox.css" type="text/css" />'); // Link to existing styles
-        printWindow.document.write('</head><body>');
-        printWindow.document.write(printableContent.innerHTML);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        setTimeout(() => { // Wait for styles to load
-            printWindow.print();
-        }, 500);
+        const originalContents = document.body.innerHTML;
+        document.body.innerHTML = printableContent.innerHTML;
+        window.print();
+        document.body.innerHTML = originalContents;
+        window.location.reload(); // Reload to restore event listeners and state
     };
 
     const sortedMessages = [...messages].sort((a, b) => b.dateApproved - a.dateApproved);
 
     return (
-        <div className="inbox-modal-overlay" onClick={onClose}>
+        <div className="inbox-modal-overlay" onClick={() => { setSelectedMessage(null); onClose(); }}>
             <div className="inbox-modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2>{selectedMessage ? "Certificate Details" : "Resident Inbox"}</h2>
-                    <button className="close-btn" onClick={onClose}><FaTimes size={20} /></button>
+                    <h2>{selectedMessage ? 'Message Details' : 'Inbox'}</h2>
+                    <button className="close-btn" onClick={() => { setSelectedMessage(null); onClose(); }}><FaTimes size={20} /></button>
                 </div>
 
                 <div className="inbox-body">
-                    {!selectedMessage ? (
-                        // List View
-                        sortedMessages.length === 0 ? (
-                            <div className="no-items-placeholder">
-                                <FaRegSadTear size={50} />
-                                <h3>Your Inbox is Empty</h3>
-                                <p>Approved certificates will appear here.</p>
-                            </div>
-                        ) : (
-                            <div className="message-list">
-                                {sortedMessages.map(msg => (
-                                    <div key={msg.id} className={`message-item ${!msg.isRead ? 'unread' : ''}`} onClick={() => handleSelectMessage(msg)}>
-                                        <div className="message-icon"></div>
-                                        <div className="message-summary">
-                                            <span className="message-title">Certificate of {msg.certificateType}</span>
-                                            <span className="message-subtitle">Your request has been approved.</span>
-                                        </div>
-                                        <span className="message-date">{new Date(msg.dateApproved).toLocaleDateString()}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )
-                    ) : (
-                        // Detail View
+                    {selectedMessage ? (
                         <div className="details-body">
-                            <button className="back-to-list-btn" onClick={handleBackToList}>
-                                <FaChevronLeft /> Back to Inbox
+                            <button className="back-to-list-btn" onClick={() => setSelectedMessage(null)}>
+                                &larr; Back to Inbox
                             </button>
-
-                            <div id="printable-certificate" className="certificate-paper">
-                                <div className="cert-header">
-                                    <h3>Republic of the Philippines</h3>
-                                    <h4>Barangay Poblacion</h4>
-                                    <h5>Villanueva, Misamis Oriental</h5>
-                                    <h1>Certificate of {selectedMessage.certificateType}</h1>
-                                </div>
-                                <div className="cert-body">
-                                    <p>This is to certify that <strong>{selectedMessage.requester}</strong>, a resident of this barangay, has been issued this certificate for the purpose of <strong>"{selectedMessage.purpose}"</strong>.</p>
-                                    <p>This certification is issued upon the request of the above-named person as a requirement for whatever legal purpose it may serve.</p>
-                                    <p>Issued this {new Date(selectedMessage.dateApproved).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} at the Barangay Hall, Poblacion, Villanueva, Misamis Oriental.</p>
-                                </div>
-                                <div className="cert-footer">
-                                    <div className="signature-line">
-                                        <strong>Barangay Captain</strong>
-                                        <span>(Signature over printed name)</span>
+                            {selectedMessage.type === 'approved_certificate' && (
+                                <div id="printable-certificate" className="certificate-paper">
+                                    <div className="cert-header">
+                                        <h3>Republic of the Philippines</h3>
+                                        <h4>Province of Misamis Oriental</h4>
+                                        <h5>MUNICIPALITY OF VILLANUEVA</h5>
+                                        <h1>Barangay {selectedMessage.requester.barangay || 'Poblacion 1'}</h1>
+                                    </div>
+                                    <div className="cert-body">
+                                        <p>This is to certify that <strong>{selectedMessage.requester}</strong>, a resident of this barangay, has been granted a <strong>{selectedMessage.certificateType}</strong> for the purpose of "{selectedMessage.purpose}".</p>
+                                        <p>This certification is issued upon the request of the above-named person for whatever legal purpose it may serve.</p>
+                                        <p>Issued this {new Date(selectedMessage.dateApproved).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })} at the Barangay Hall.</p>
+                                    </div>
+                                    <div className="cert-footer">
+                                        <div className="signature-line">
+                                            <strong>JUAN DELA CRUZ</strong>
+                                            <span>Barangay Captain</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-
+                            )}
                             <div className="details-footer">
-                                <button className="delete-message-btn" onClick={() => { onDelete(selectedMessage.id); handleBackToList(); }}>
-                                    <FaTrash /> Delete Message
-                                </button>
-                                <button className="print-btn" onClick={handlePrint}>
-                                    <FaPrint /> Print Certificate
-                                </button>
+                                <button className="print-btn" onClick={handlePrint}><FaPrint /> Print</button>
                             </div>
+                        </div>
+                    ) : messages.length === 0 ? (
+                        <div className="no-items-placeholder">
+                            <FaRegSadTear size={50} />
+                            <h3>Your Inbox is Empty</h3>
+                            <p>Approved certificate requests will appear here.</p>
+                        </div>
+                    ) : (
+                        <div className="message-list">
+                            {sortedMessages.map(msg => (
+                                <div
+                                    key={msg.id}
+                                    className={`message-item ${msg.isRead ? '' : 'unread'} ${deletingMessageId === msg.id ? 'deleting' : ''}`}
+                                    onClick={() => handleMessageClick(msg)}
+                                >
+                                    <div className="message-icon"></div>
+                                    <div className="message-summary">
+                                        <span className="message-title">Certificate Approved</span>
+                                        <span className="message-subtitle">Your request for {msg.certificateType} is ready.</span>
+                                    </div>
+                                    <span className="message-date">
+                                        {new Date(msg.dateApproved).toLocaleDateString()}
+                                    </span>
+                                    <button
+                                        className="message-delete-btn"
+                                        onClick={(e) => handleDeleteClick(e, msg.id)}
+                                        title="Delete message"
+                                        disabled={deletingMessageId}
+                                    >
+                                        <FaTimes size={12} />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
