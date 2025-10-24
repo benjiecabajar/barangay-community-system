@@ -1,4 +1,6 @@
 /* Reusing styles from modal-r-report.css for consistency */
+@import './modal-base.css';
+
 .cert-modal-overlay {
     position: fixed;
     top: 0;
@@ -13,8 +15,6 @@
     z-index: 1000;  
     animation: fadeInOverlay 0.35s ease forwards;
 }
-@import './modal-base.css';
-
 .cert-modal-content {
     background: var(--bg-primary);
     /* Inherits from .modal-content in modal-base.css */
