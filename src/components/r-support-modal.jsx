@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaTimes, FaHeadset, FaChevronDown, FaChevronUp, FaExclamationTriangle } from 'react-icons/fa';
+import { FaTimes, FaHeadset, FaChevronDown, FaChevronUp, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa';
 import '../styles/r-support-modal.css';
 
 const AccordionItem = ({ title, children }) => {
@@ -21,6 +21,17 @@ const SupportModal = ({ isOpen, onClose, onReportUser, initialReportedUser }) =>
     const [reportedUserName, setReportedUserName] = useState('');
     const [reportReason, setReportReason] = useState('');
     const reportSectionRef = useRef(null);
+
+    // State for the new contact form
+    const [isContactFormVisible, setIsContactFormVisible] = useState(false);
+    const [issueType, setIssueType] = useState('');
+    const [issueDescription, setIssueDescription] = useState('');
+    const [contactSubmissionStatus, setContactSubmissionStatus] = useState(null);
+
+    const ISSUE_TYPES = ['Technical Bug', 'Feature Request', 'Account Issue', 'General Inquiry', 'Other'];
+
+
+
 
     useEffect(() => {
         if (isOpen) {
@@ -66,6 +77,24 @@ const SupportModal = ({ isOpen, onClose, onReportUser, initialReportedUser }) =>
             onReportUser(reportedUserName, reportReason);
             setReportedUserName('');
             setReportReason('');
+        }
+    };
+
+    const handleContactAdminSubmit = (e) => {
+        e.preventDefault();
+        if (issueType && issueDescription.trim()) {
+            setContactSubmissionStatus('submitting');
+            console.log('Submitting to admin:', { issueType, issueDescription });
+            // Simulate API call
+            setTimeout(() => {
+                setContactSubmissionStatus('success');
+                setTimeout(() => {
+                    setIsContactFormVisible(false);
+                    setIssueType('');
+                    setIssueDescription('');
+                    setContactSubmissionStatus(null);
+                }, 2000);
+            }, 1500);
         }
     };
 
@@ -122,9 +151,43 @@ const SupportModal = ({ isOpen, onClose, onReportUser, initialReportedUser }) =>
                     <div className="contact-support-section">
                         <h4>Need More Help?</h4>
                         <p>If you're experiencing a technical issue or have a question not answered above, please contact the system administrator.</p>
-                        <a href="mailto:admin@easebarangay.com?subject=Resident Support Request" className="contact-btn">
-                            Email Administrator
-                        </a>
+                        {!isContactFormVisible ? (
+                            <button onClick={() => setIsContactFormVisible(true)} className="contact-btn">
+                                Contact Administrator
+                            </button>
+                        ) : (
+                            contactSubmissionStatus === 'success' ? (
+                                <div className="contact-success-message">
+                                    <FaCheckCircle /> Your message has been sent. The administrator will get back to you shortly.
+                                </div>
+                            ) : (
+                                <form onSubmit={handleContactAdminSubmit} className="contact-admin-form">
+                                    <div className="form-group">
+                                        <label htmlFor="issue-type">Issue Type</label>
+                                        <select id="issue-type" value={issueType} onChange={(e) => setIssueType(e.target.value)} required>
+                                            <option value="" disabled>Select an issue type...</option>
+                                            {ISSUE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="issue-description">Description</label>
+                                        <textarea
+                                            id="issue-description"
+                                            value={issueDescription}
+                                            onChange={(e) => setIssueDescription(e.target.value)}
+                                            placeholder="Please describe the issue in detail..."
+                                            required
+                                        ></textarea>
+                                    </div>
+                                    <div className="contact-form-actions">
+                                        <button type="button" className="cancel-contact-btn" onClick={() => setIsContactFormVisible(false)}>Cancel</button>
+                                        <button type="submit" className="submit-contact-btn" disabled={!issueType || !issueDescription.trim() || contactSubmissionStatus === 'submitting'}>
+                                            {contactSubmissionStatus === 'submitting' ? 'Sending...' : 'Send Message'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )
+                        )}
                     </div>
 
                     <div className="system-info-footer">

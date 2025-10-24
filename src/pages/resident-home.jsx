@@ -951,7 +951,8 @@ function Home() {
                     <div key={event.id} className={eventClasses} onClick={() => handleDateClick(new Date(event.date))}>
                       <div className="event-item-header">
                         <p className="event-item-title">{event.title}</p>
-                        {isHappeningNow && <span className="live-badge">On Going</span>}
+                        {isHappeningNow && <span className="live-badge">Ongoing</span>}
+                        {hasEnded && <span className="live-badge ended" style={{ backgroundColor: '#ef4444' } }>Ended</span>}
                       </div>
                       {event.description && <p className="event-item-desc">{event.description}</p>}
                       <p className="event-item-date-display">

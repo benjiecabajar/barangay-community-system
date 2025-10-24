@@ -28,7 +28,7 @@ function Login() {
       if (storedUsername) {
         setUsername(storedUsername);
       }
-    }
+    } 
   }, []);
 
   const handleLogin = () => {
@@ -64,7 +64,7 @@ function Login() {
       <div className="login-box">
         <h1>Login</h1>
         <h2>__</h2>
-        <h3>Please select your role.</h3>
+        <h3>Please enter your credentials.</h3>
 
         <label className="input-label">Username</label>
         <div className="input-container">

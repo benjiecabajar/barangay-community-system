@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { FaTimes, FaRegSadTear, FaChevronLeft, FaPrint } from 'react-icons/fa';
+import { FaTimes, FaRegSadTear, FaChevronLeft, FaPrint, FaTrash } from 'react-icons/fa';
 import '../styles/modal-inbox.css';
 
-const InboxModal = ({ isOpen, onClose, messages, onMarkAsRead }) => {
+const InboxModal = ({ isOpen, onClose, messages, onMarkAsRead, onDelete, onClearAll }) => {
     const [selectedMessage, setSelectedMessage] = useState(null);
 
     if (!isOpen) return null;
@@ -12,6 +12,11 @@ const InboxModal = ({ isOpen, onClose, messages, onMarkAsRead }) => {
         if (!message.isRead) {
             onMarkAsRead(message.id);
         }
+    };
+
+    const handleBackToList = () => {
+        setSelectedMessage(null);
+        // No need to call onDelete here, as it's for individual message deletion
     };
 
     const handlePrint = () => {
@@ -34,7 +39,7 @@ const InboxModal = ({ isOpen, onClose, messages, onMarkAsRead }) => {
         <div className="inbox-modal-overlay" onClick={onClose}>
             <div className="inbox-modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2>{selectedMessage ? "Certificate Details" : "Inbox"}</h2>
+                    <h2>{selectedMessage ? "Certificate Details" : "Resident Inbox"}</h2>
                     <button className="close-btn" onClick={onClose}><FaTimes size={20} /></button>
                 </div>
 
@@ -64,7 +69,7 @@ const InboxModal = ({ isOpen, onClose, messages, onMarkAsRead }) => {
                     ) : (
                         // Detail View
                         <div className="details-body">
-                            <button className="back-to-list-btn" onClick={() => setSelectedMessage(null)}>
+                            <button className="back-to-list-btn" onClick={handleBackToList}>
                                 <FaChevronLeft /> Back to Inbox
                             </button>
 
@@ -89,6 +94,9 @@ const InboxModal = ({ isOpen, onClose, messages, onMarkAsRead }) => {
                             </div>
 
                             <div className="details-footer">
+                                <button className="delete-message-btn" onClick={() => { onDelete(selectedMessage.id); handleBackToList(); }}>
+                                    <FaTrash /> Delete Message
+                                </button>
                                 <button className="print-btn" onClick={handlePrint}>
                                     <FaPrint /> Print Certificate
                                 </button>

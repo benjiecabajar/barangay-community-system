@@ -4,6 +4,7 @@ import "../styles/login.css";
 import "../styles/sign_in.css";
 import "@fontsource/poppins";
 import { logAuditAction } from "../utils/auditLogger";
+import TermsModal from "../components/modal-terms";
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -22,8 +23,10 @@ export default function SignIn() {
   const [errors, setErrors] = useState({});
   const [notification, setNotification] = useState("");
   const [signupStatus, setSignupStatus] = useState(null); // To show confirmation screen
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [hasViewedTerms, setHasViewedTerms] = useState(false);
   // NEW STATE: Tracks if the user has manually changed the username
-  const [isUsernameCustom, setIsUsernameCustom] = useState(false); 
 
   const barangays = [
     "Balacanas",
@@ -43,49 +46,15 @@ export default function SignIn() {
   const validateEmail = (email) => 
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const suggestUsername = (first, last) => {
-    // Basic suggestion: lowercase first initial + full last name
-    // Remove spaces and convert to lowercase for username format
-    const cleanedFirst = first.trim().toLowerCase();
-    const cleanedLast = last.trim().toLowerCase().replace(/\s/g, '');
-
-    if (cleanedFirst && cleanedLast) {
-      return `${cleanedFirst.charAt(0)}${cleanedLast}`; // e.g., jsmith
-    }
-    return '';
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     
     // Clear errors and notifications
     setErrors((prevErrors) => ({ ...prevErrors, [name]: false }));
+    if (name !== 'terms') setErrors((prevErrors) => ({ ...prevErrors, terms: false }));
     setNotification("");
     
-    let newForm = { ...form, [name]: value };
-
-    // 1. Handle Username Suggestion Logic
-    if (name === "firstName" || name === "lastName") {
-        // Only suggest if the user hasn't entered a custom username
-        if (!isUsernameCustom) {
-            const suggested = suggestUsername(
-                name === 'firstName' ? value : form.firstName,
-                name === 'lastName' ? value : form.lastName
-            );
-            newForm.username = suggested;
-        }
-    } else if (name === "username") {
-        // If the user types anything into the username field, mark it as custom
-        if (value) {
-            setIsUsernameCustom(true);
-        } else {
-            // If they delete it, reset the custom flag and suggest a name
-            setIsUsernameCustom(false);
-            const suggested = suggestUsername(form.firstName, form.lastName);
-            newForm.username = suggested;
-        }
-    }
-
+    const newForm = { ...form, [name]: value };
     setForm(newForm);
 
     // 2. Handle Live Email validation
@@ -146,6 +115,11 @@ export default function SignIn() {
       currentNotification = "Passwords do not match.";
     }
 
+    // 5. Check Terms and Conditions
+    if (!termsAccepted) {
+      newErrors.terms = true;
+      if (!currentNotification) currentNotification = "You must accept the Terms and Conditions to sign up.";
+    }
     // 5. Set general notification for empty fields only if no other specific error message has been set
     if (Object.keys(newErrors).some(key => newErrors[key] === true) && !currentNotification) {
       currentNotification = "Please fill in all required fields!";
@@ -196,6 +170,14 @@ export default function SignIn() {
 
   return (
     <div className="sign-page">
+      <TermsModal 
+        isOpen={isTermsModalOpen}
+        onClose={() => {
+          setHasViewedTerms(true); // Mark as viewed even if they just close it
+          setIsTermsModalOpen(false);
+        }}
+      />
+
       {signupStatus === 'success' ? (
         <div className="sign-box success-confirmation">
           <svg className="success-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -302,6 +284,29 @@ export default function SignIn() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="terms-container">
+          <input
+            type="checkbox"
+            id="terms"
+            checked={termsAccepted}
+            onChange={(e) => {
+              if (hasViewedTerms) {
+                setTermsAccepted(e.target.checked);
+              } else {
+                setNotification("Please click to read the Terms and Conditions before accepting.");
+              }
+            }}
+            className={errors.terms ? "error-checkbox" : ""}
+          />
+          <label htmlFor="terms">
+            I agree to the <span 
+              className="terms-link"
+              onClick={() => { setHasViewedTerms(true); setIsTermsModalOpen(true); }}>
+                Terms and Conditions
+            </span>
+          </label>
         </div>
 
         {notification && <p className="notification">{notification}</p>}

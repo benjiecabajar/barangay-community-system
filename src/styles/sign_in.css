@@ -302,3 +302,12 @@ html, body, #root {
 .input-error {
   border: 1px solid red !important;
 }
+
+.terms-container {
+  display: flex;
+  font-size: 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 0.20rem 0;
+}

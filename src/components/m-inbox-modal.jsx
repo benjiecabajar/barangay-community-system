@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { FaTimes, FaRegSadTear, FaChevronLeft, FaEnvelopeOpen } from 'react-icons/fa';
+import { FaTimes, FaRegSadTear, FaChevronLeft, FaEnvelopeOpen, FaTrash } from 'react-icons/fa';
 import '../styles/m-inbox-modal.css';
 
-const ModeratorInboxModal = ({ isOpen, onClose, messages, onMarkAsRead, onDelete }) => {
+const ModeratorInboxModal = ({ isOpen, onClose, messages, onMarkAsRead, onDelete, onClearAll }) => {
     const [selectedMessage, setSelectedMessage] = useState(null);
 
     if (!isOpen) return null;
@@ -80,6 +80,13 @@ const ModeratorInboxModal = ({ isOpen, onClose, messages, onMarkAsRead, onDelete
                         </div>
                     )}
                 </div>
+                {!selectedMessage && messages.length > 0 && (
+                    <div className="modal-footer">
+                        <button className="clear-all-btn" onClick={onClearAll}>
+                            <FaTrash /> Clear All Messages
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
